@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Music, ChevronUp, Check, Play, Pause, Plus, Link as LinkIcon, Youtube } from "lucide-react";
+import { Volume2, VolumeX, Music, Check, Play, Pause, Plus, Youtube, Mic, Loader2, Sparkles } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ReactPlayer from 'react-player';
+import "regenerator-runtime/runtime";
 
 const INITIAL_PLAYLIST = [
   {
@@ -48,6 +49,18 @@ const INITIAL_PLAYLIST = [
   }
 ];
 
+// Mock database for "Voice Search"
+const MOCK_SEARCH_RESULTS: Record<string, { name: string; url: string }> = {
+  "meditation": { name: "Deep Meditation", url: "https://www.youtube.com/watch?v=inpok4MKVLM" },
+  "yoga": { name: "Yoga Flow", url: "https://www.youtube.com/watch?v=sJ23Qv5Oq3I" },
+  "piano": { name: "Calm Piano", url: "https://www.youtube.com/watch?v=cM5B8jR2Gfo" },
+  "lofi": { name: "Lofi Beats", url: "https://www.youtube.com/watch?v=jfKfPfyJRdk" },
+  "relax": { name: "Relaxing Vibes", url: "https://www.youtube.com/watch?v=lTRiuFIWV54" },
+  "nature": { name: "Nature Sounds", url: "https://www.youtube.com/watch?v=eKFTSSKCzWA" },
+  "study": { name: "Study Focus", url: "https://www.youtube.com/watch?v=5qap5aO4i9A" },
+  "sleep": { name: "Sleep Music", url: "https://www.youtube.com/watch?v=1ZYbU82GVz4" }
+};
+
 export function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackId, setCurrentTrackId] = useState("flute");
@@ -56,26 +69,21 @@ export function BackgroundMusic() {
   const [customTrackName, setCustomTrackName] = useState("");
   const [playlist, setPlaylist] = useState(INITIAL_PLAYLIST);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<"idle" | "listening" | "searching" | "found" | "not-found">("idle");
   
-  // Ref for the audio element (for Archive.org links)
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Ref for ReactPlayer (for YouTube/custom links)
   const playerRef = useRef<ReactPlayer | null>(null);
 
   const currentTrack = playlist.find(t => t.id === currentTrackId) || playlist[0];
   const isCustomTrack = currentTrack.type === "custom";
 
   useEffect(() => {
-    // Stop any existing audio when switching tracks
     if (audioRef.current) {
       audioRef.current.pause();
     }
 
-    if (isCustomTrack) {
-      // ReactPlayer handles playback via props
-      // We rely on the `playing` prop passed to ReactPlayer
-    } else {
-      // Native Audio for Archive.org files
+    if (!isCustomTrack) {
       const audio = new Audio(currentTrack.src);
       audio.loop = true;
       audio.volume = volume[0];
@@ -97,15 +105,12 @@ export function BackgroundMusic() {
     }
   }, [currentTrackId]);
 
-  // Handle volume change
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume[0];
     }
-    // ReactPlayer volume is handled via props
   }, [volume]);
 
-  // Sync play state
   useEffect(() => {
     if (!isCustomTrack && audioRef.current) {
       if (isPlaying) {
@@ -124,7 +129,7 @@ export function BackgroundMusic() {
   const changeTrack = (trackId: string) => {
     if (trackId === currentTrackId) return;
     setCurrentTrackId(trackId);
-    setIsPlaying(true); // Auto-play when switching tracks
+    setIsPlaying(true);
   };
 
   const handleAddCustomTrack = () => {
@@ -143,6 +148,69 @@ export function BackgroundMusic() {
     setIsDialogOpen(false);
     setCustomUrl("");
     setCustomTrackName("");
+    setSearchStatus("idle");
+  };
+
+  const startVoiceSearch = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert("Voice recognition is not supported in this browser.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setSearchStatus("listening");
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      console.log("Voice Search:", transcript);
+      setSearchStatus("searching");
+      
+      // Mock Search Logic
+      setTimeout(() => {
+        let found = false;
+        // Simple keyword matching
+        for (const [key, result] of Object.entries(MOCK_SEARCH_RESULTS)) {
+          if (transcript.includes(key)) {
+            setCustomTrackName(result.name);
+            setCustomUrl(result.url);
+            setSearchStatus("found");
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          // If no match, just fill the name with the transcript
+          setCustomTrackName(transcript.charAt(0).toUpperCase() + transcript.slice(1) + " (Search)");
+          setSearchStatus("not-found");
+        }
+        setIsListening(false);
+      }, 1500);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+      setSearchStatus("idle");
+    };
+
+    recognition.onend = () => {
+      if (searchStatus === "listening") {
+        setIsListening(false);
+        setSearchStatus("idle");
+      }
+    };
+
+    recognition.start();
   };
 
   return (
@@ -158,7 +226,7 @@ export function BackgroundMusic() {
             volume={volume[0]}
             width="0"
             height="0"
-            onError={(e) => console.error("ReactPlayer Error:", e)}
+            onError={(e: any) => console.error("ReactPlayer Error:", e)}
           />
         </div>
       )}
@@ -244,6 +312,52 @@ export function BackgroundMusic() {
                     <DialogTitle>Add Custom Music</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
+                    
+                    {/* Voice Search Section */}
+                    <div className="bg-muted/50 p-4 rounded-lg flex flex-col items-center justify-center gap-3 border border-dashed">
+                       <div className="text-center">
+                         <p className="text-sm font-medium mb-1">Voice Search</p>
+                         <p className="text-xs text-muted-foreground">Try saying "Meditation", "Piano", or "Lofi"</p>
+                       </div>
+                       
+                       <Button 
+                        variant={isListening ? "destructive" : "secondary"} 
+                        size="icon" 
+                        className={`h-12 w-12 rounded-full transition-all ${isListening ? "animate-pulse" : ""}`}
+                        onClick={startVoiceSearch}
+                        disabled={searchStatus === "searching"}
+                       >
+                         {searchStatus === "searching" ? (
+                           <Loader2 className="h-5 w-5 animate-spin" />
+                         ) : (
+                           <Mic className="h-5 w-5" />
+                         )}
+                       </Button>
+
+                       {searchStatus === "found" && (
+                         <div className="flex items-center gap-1 text-xs text-green-600 animate-in fade-in slide-in-from-bottom-1">
+                           <Sparkles className="h-3 w-3" />
+                           <span>Found match!</span>
+                         </div>
+                       )}
+                       {searchStatus === "not-found" && (
+                         <div className="text-xs text-amber-600 animate-in fade-in slide-in-from-bottom-1">
+                           No direct match, but I filled the name.
+                         </div>
+                       )}
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or enter manually
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="grid gap-2">
                       <Label htmlFor="name">Track Name</Label>
                       <Input
