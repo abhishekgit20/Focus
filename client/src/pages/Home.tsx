@@ -242,6 +242,42 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* How It Works - Step by Step */}
+        <section className="py-24 bg-muted/20 relative z-30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 font-serif">How Focus Works</h2>
+              <p className="text-muted-foreground text-lg">Your journey to wellness in 3 simple steps.</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 relative">
+              {/* Connecting Line (Desktop) */}
+              <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent z-0" />
+
+              {[
+                { step: "01", title: "Choose Your Guide", desc: "Browse verified psychologists, therapists, or yoga gurus based on your needs." },
+                { step: "02", title: "Book a Session", desc: "Schedule a video, audio, or chat session at a time that works for you." },
+                { step: "03", title: "Begin Healing", desc: "Connect securely and start your journey towards mental peace and clarity." }
+              ].map((item, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.2 }}
+                  viewport={{ once: true }}
+                  className="relative z-10 text-center"
+                >
+                  <div className="w-24 h-24 mx-auto rounded-full bg-background border-4 border-primary/10 flex items-center justify-center text-3xl font-bold text-primary mb-6 shadow-sm">
+                    {item.step}
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 font-serif">{item.title}</h3>
+                  <p className="text-muted-foreground max-w-xs mx-auto">{item.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </PageTransition>
   );
