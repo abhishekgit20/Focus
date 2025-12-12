@@ -1,8 +1,9 @@
 import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import heroBg from "@assets/generated_images/indian_wellness_hero.png";
 import { Heart, Sparkles, Shield, Flower, Users, IndianRupee } from "lucide-react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 
 const HERO_VIDEOS = [
@@ -17,6 +18,7 @@ export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
   const [videoSrc, setVideoSrc] = useState("");
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   
   // Parallax effects
   const heroY = useTransform(scrollY, [0, 500], [0, 200]);
@@ -39,9 +41,24 @@ export default function Home() {
           {/* Background Layer - Moves slower */}
           <motion.div 
             style={{ y: heroY, opacity: heroOpacity }}
-            className="absolute inset-0 z-0"
+            className="absolute inset-0 z-0 bg-neutral-900" // Dark background to prevent white flash
           >
-             <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background z-10" />
+             <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background z-20" />
+            
+            {/* Fallback Image - Visible while video loads */}
+            <AnimatePresence>
+              {!isVideoLoaded && (
+                <motion.img 
+                  initial={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 1 }}
+                  src={heroBg}
+                  alt="Background Placeholder"
+                  className="absolute inset-0 w-full h-full object-cover z-10"
+                />
+              )}
+            </AnimatePresence>
+
             {videoSrc && (
               <video 
                 src={videoSrc}
@@ -49,7 +66,8 @@ export default function Home() {
                 muted 
                 loop 
                 playsInline
-                className="w-full h-full object-cover"
+                onCanPlay={() => setIsVideoLoaded(true)}
+                className={`w-full h-full object-cover transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
           </motion.div>
