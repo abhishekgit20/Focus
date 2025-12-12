@@ -4,9 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const MOOD_DATA = [
   { day: "Mon", score: 6 },
@@ -49,9 +55,21 @@ export default function Profile() {
                 <div>
                   <h2 className="text-2xl font-bold font-serif text-foreground">Aditya Kumar</h2>
                   <p className="text-muted-foreground">Focus Member since 2024</p>
-                  <div className="flex gap-2 mt-4 justify-center">
+                  <div className="flex gap-2 mt-4 justify-center items-center">
                     <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200">Premium</Badge>
-                    <Badge variant="outline">Level 5</Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="outline" className="cursor-help flex items-center gap-1">
+                            Level 5 <Info className="w-3 h-3" />
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Earned by consistent practice and journaling.</p>
+                          <p className="text-xs text-muted-foreground mt-1">Next level: 250 points</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               </div>
@@ -152,7 +170,7 @@ export default function Profile() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="day" axisLine={false} tickLine={false} />
                         <YAxis hide domain={[0, 10]} />
-                        <Tooltip 
+                        <RechartsTooltip 
                           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                         />
                         <Area 
@@ -231,7 +249,7 @@ export default function Profile() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="day" axisLine={false} tickLine={false} />
                         <YAxis axisLine={false} tickLine={false} />
-                        <Tooltip />
+                        <RechartsTooltip />
                         <Area 
                           type="monotone" 
                           dataKey="mins" 
