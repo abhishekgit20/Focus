@@ -26,32 +26,37 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/about">
-          <a className="text-2xl font-serif font-bold text-primary flex items-center gap-2 drop-shadow-sm">
-            Focus
-          </a>
-        </Link>
+        <div className="flex items-center gap-8">
+          <Link href="/about">
+            <a className="text-2xl font-serif font-bold text-primary flex items-center gap-2 drop-shadow-sm hover:opacity-90 transition-opacity">
+              Focus
+            </a>
+          </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
-          {links.map((link) => (
-            <Link key={link.href} href={link.href}>
-              <a
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary",
-                  location === link.href
-                    ? "text-primary font-bold"
-                    : "text-muted-foreground"
-                )}
-              >
-                {link.label}
-              </a>
-            </Link>
-          ))}
-          
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center gap-6">
+            {links.map((link) => (
+              <Link key={link.href} href={link.href}>
+                <a
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    location === link.href
+                      ? "text-primary font-bold"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {link.label}
+                </a>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
                 <Globe className="w-4 h-4" /> {lang}
               </Button>
             </DropdownMenuTrigger>
@@ -70,8 +75,8 @@ export function Navbar() {
           </DropdownMenu>
 
           <Link href="/profile">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+            <Button variant="ghost" size="icon" className="rounded-full w-9 h-9">
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
                 <img 
                   src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60" 
                   alt="Profile" 
@@ -81,14 +86,14 @@ export function Navbar() {
             </Button>
           </Link>
 
-          <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
+          <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6">
             Get Started
           </Button>
         </div>
 
         {/* Mobile Nav Toggle */}
         <button
-          className="md:hidden p-2"
+          className="md:hidden p-2 text-muted-foreground hover:text-primary transition-colors"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X /> : <Menu />}
