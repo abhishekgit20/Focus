@@ -169,29 +169,29 @@ export default function Profile() {
                 </Card>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="text-base">Today's Check-in</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex justify-between gap-2">
-                        <Button variant="outline" className="flex-1 flex flex-col gap-2 h-auto py-4 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
-                          <Frown className="w-8 h-8" />
-                          <span className="text-xs">Stressed</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button variant="outline" className="flex flex-col gap-1 h-auto py-3 px-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                          <Frown className="w-6 h-6" />
+                          <span className="text-[10px] uppercase font-bold tracking-wide">Stressed</span>
                         </Button>
-                        <Button variant="outline" className="flex-1 flex flex-col gap-2 h-auto py-4 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200">
-                          <Meh className="w-8 h-8" />
-                          <span className="text-xs">Okay</span>
+                        <Button variant="outline" className="flex flex-col gap-1 h-auto py-3 px-1 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200">
+                          <Meh className="w-6 h-6" />
+                          <span className="text-[10px] uppercase font-bold tracking-wide">Okay</span>
                         </Button>
-                        <Button variant="outline" className="flex-1 flex flex-col gap-2 h-auto py-4 hover:bg-green-50 hover:text-green-600 hover:border-green-200 bg-green-50 border-green-200 text-green-700">
-                          <Smile className="w-8 h-8" />
-                          <span className="text-xs">Great</span>
+                        <Button variant="outline" className="flex flex-col gap-1 h-auto py-3 px-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 bg-green-50 border-green-200 text-green-700">
+                          <Smile className="w-6 h-6" />
+                          <span className="text-[10px] uppercase font-bold tracking-wide">Great</span>
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
                   
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="text-base">Journal Entry</CardTitle>
                     </CardHeader>
