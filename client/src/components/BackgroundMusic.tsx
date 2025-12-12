@@ -46,8 +46,8 @@ export function BackgroundMusic() {
 
   return (
     <div className="fixed bottom-6 left-6 z-50">
-      {/* Hidden Player - keeping it in DOM but invisible */}
-      <div className="fixed bottom-0 right-0 opacity-0 pointer-events-none w-1 h-1 overflow-hidden z-[-1]">
+      {/* Hidden Player - keeping it technically visible to bypass browser autoplay restrictions */}
+      <div className="fixed bottom-0 right-0 w-[1px] h-[1px] opacity-10 pointer-events-none overflow-hidden z-[-1]">
         <ReactPlayer
           ref={playerRef as any}
           url={PARVATI_PANCHAKAM_URL}
@@ -65,7 +65,8 @@ export function BackgroundMusic() {
                 controls: 0, 
                 disablekb: 1,
                 modestbranding: 1,
-                origin: window.location.origin
+                origin: window.location.origin,
+                rel: 0,
               }
             }
           }}
