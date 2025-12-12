@@ -91,16 +91,27 @@ export function BackgroundMusic() {
       
       audioRef.current = audio;
 
+      // Handle play promise to avoid interruption errors
       if (isPlaying) {
-        audio.play().catch(e => {
-          console.error("Autoplay failed:", e);
-          setIsPlaying(false);
-        });
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            // Auto-play was prevented or interrupted
+            // We can safely ignore AbortError as it happens during quick track switching
+            if (e.name !== 'AbortError') {
+              console.error("Audio playback error:", e);
+              setIsPlaying(false);
+            }
+          });
+        }
       }
 
       return () => {
-        audio.pause();
-        audio.src = "";
+        // Only pause if we have an audio element
+        if (audio) {
+          audio.pause();
+          audio.src = "";
+        }
       };
     }
   }, [currentTrackId]);
@@ -114,7 +125,14 @@ export function BackgroundMusic() {
   useEffect(() => {
     if (!isCustomTrack && audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch(console.error);
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            if (e.name !== 'AbortError') {
+              console.error("Audio playback error:", e);
+            }
+          });
+        }
       } else {
         audioRef.current.pause();
       }
