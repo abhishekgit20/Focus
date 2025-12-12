@@ -8,9 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Filter, X, RotateCcw } from "lucide-react";
 
-export function FilterPanel() {
+export function FilterPanel({ onApplyFilters }: { onApplyFilters?: (filters: Record<string, string[]>) => void }) {
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [isOpen, setIsOpen] = useState(false);
+
+  // ... (rest of the file)
+
+  const handleApply = () => {
+    if (onApplyFilters) {
+      onApplyFilters(selectedFilters);
+    }
+    setIsOpen(false);
+  };
+
+  // Update SheetFooter Apply Button to call handleApply
+
 
   const filterCategories = [
     {
@@ -190,11 +202,15 @@ export function FilterPanel() {
               Cancel
             </Button>
           </SheetClose>
-          <SheetClose asChild>
-            <Button className="flex-1 rounded-full bg-[#FF9933] hover:bg-[#F57C00] text-white border-none shadow-md hover:shadow-lg transition-all">
-              Apply Filters {totalFilters > 0 ? `(${totalFilters})` : ''}
-            </Button>
-          </SheetClose>
+          <Button 
+            onClick={() => {
+              if (onApplyFilters) onApplyFilters(selectedFilters);
+              setIsOpen(false);
+            }}
+            className="flex-1 rounded-full bg-[#FF9933] hover:bg-[#F57C00] text-white border-none shadow-md hover:shadow-lg transition-all"
+          >
+            Apply Filters {totalFilters > 0 ? `(${totalFilters})` : ''}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

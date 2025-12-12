@@ -63,15 +63,48 @@ const professionals = [
 
 export default function Therapists() {
   const [filter, setFilter] = useState("All");
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, string[]>>({});
 
   const filteredProfessionals = professionals.filter(prof => {
-    if (filter === "All") return true;
+    // 1. Basic Filters (Buttons)
     if (filter === "Psychologists") {
-      return ["Clinical Psychologist", "Psychiatrist", "Therapist"].includes(prof.title);
+      if (!["Clinical Psychologist", "Psychiatrist", "Therapist"].includes(prof.title)) return false;
     }
     if (filter === "Yoga Gurus") {
-      return prof.title.includes("Yoga");
+      if (!prof.title.includes("Yoga")) return false;
     }
+
+    // 2. Advanced Filters (Panel)
+    if (Object.keys(advancedFilters).length > 0) {
+      // Professional Type
+      if (advancedFilters.professionalType?.length > 0) {
+        // Handle "Psychologist" specifically as requested
+        const hasMatchingType = advancedFilters.professionalType.some(type => {
+          if (type === "Psychologist" && prof.title.includes("Psychologist")) return true;
+          if (type === "Psychiatrist" && prof.title.includes("Psychiatrist")) return true;
+          if (type === "Therapist" && prof.title.includes("Therapist")) return true;
+          if (type === "Yoga Guru" && prof.title.includes("Yoga")) return true;
+          return prof.title === type;
+        });
+        if (!hasMatchingType) return false;
+      }
+
+      // Language
+      if (advancedFilters.language?.length > 0) {
+        const hasLanguage = advancedFilters.language.some(lang => prof.tags.includes(lang));
+        if (!hasLanguage) return false;
+      }
+
+      // Specialty
+      if (advancedFilters.specialty?.length > 0) {
+        // Simple string match for specialty
+        const hasSpecialty = advancedFilters.specialty.some(spec => prof.specialty.includes(spec));
+        if (!hasSpecialty) return false;
+      }
+      
+      // Add more filter logic here as needed for Price, Experience, etc.
+    }
+
     return true;
   });
 
@@ -89,26 +122,29 @@ export default function Therapists() {
           <div className="flex gap-2">
             <Button 
               variant={filter === "All" ? "default" : "outline"}
-              onClick={() => setFilter("All")}
+              onClick={() => { setFilter("All"); setAdvancedFilters({}); }}
               className="gap-2"
             >
               All
             </Button>
             <Button 
               variant={filter === "Psychologists" ? "default" : "outline"}
-              onClick={() => setFilter("Psychologists")}
+              onClick={() => { setFilter("Psychologists"); setAdvancedFilters({}); }}
               className="gap-2"
             >
               Psychologists
             </Button>
             <Button 
               variant={filter === "Yoga Gurus" ? "default" : "outline"}
-              onClick={() => setFilter("Yoga Gurus")}
+              onClick={() => { setFilter("Yoga Gurus"); setAdvancedFilters({}); }}
               className="gap-2"
             >
               Yoga Gurus
             </Button>
-            <FilterPanel />
+            <FilterPanel onApplyFilters={(filters) => {
+              setAdvancedFilters(filters);
+              setFilter("All"); // Reset basic buttons when using advanced filter
+            }} />
           </div>
         </div>
 
