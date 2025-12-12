@@ -31,9 +31,9 @@ const TRACK = {
   // I'll use this URL which is a popular upload of it: https://www.youtube.com/watch?v=K_7qgWkXQyA
 };
 
-// Actual URL for "Parvati Panchakam | Sounds of Isha | @LingaBhairavi"
-// Using the direct video ID from the user provided link: DnVK9mp68Zw
-const PARVATI_PANCHAKAM_URL = "https://www.youtube.com/watch?v=DnVK9mp68Zw";
+// Actual URL for "Om Meditation Sound"
+// Using a popular, high-quality Om chanting video
+const OM_MEDITATION_URL = "https://www.youtube.com/watch?v=vH11J69E7p8";
 
 export function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -50,7 +50,7 @@ export function BackgroundMusic() {
       <div className="fixed bottom-0 right-0 w-[1px] h-[1px] opacity-10 pointer-events-none overflow-hidden z-[-1]">
         <ReactPlayer
           ref={playerRef as any}
-          url={PARVATI_PANCHAKAM_URL}
+          url={OM_MEDITATION_URL}
           playing={isPlaying}
           loop={true}
           volume={volume}
@@ -94,7 +94,7 @@ export function BackgroundMusic() {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>{isPlaying ? "Playing: Parvati Panchakam" : "Play Parvati Panchakam"}</p>
+            <p>{isPlaying ? "Playing: Om Meditation" : "Play Om Meditation"}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
