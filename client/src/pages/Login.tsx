@@ -19,6 +19,8 @@ export default function Login() {
     
     // Simulate login delay
     setTimeout(() => {
+      localStorage.setItem('isLoggedIn', 'true');
+      window.dispatchEvent(new Event('auth-change'));
       setIsLoading(false);
       setLocation("/profile");
     }, 1500);
