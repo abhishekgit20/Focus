@@ -20,13 +20,15 @@ import heroBg1 from "@assets/generated_images/indian_wellness_scene_with_yoga_gu
 import heroBg2 from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
 import heroBg3 from "@assets/generated_images/psychologist_counseling_client_with_yoga_background.png";
 
-// Lazy load pages for better performance
-const Home = lazy(() => import("@/pages/Home"));
-const Services = lazy(() => import("@/pages/Services"));
-const Therapists = lazy(() => import("@/pages/Therapists"));
+// Eager load core pages for instant navigation
+import Home from "@/pages/Home";
+import Services from "@/pages/Services";
+import Therapists from "@/pages/Therapists";
+import Profile from "@/pages/Profile";
+
+// Lazy load less critical pages
 const Recommendations = lazy(() => import("@/pages/Recommendations"));
 const About = lazy(() => import("@/pages/About"));
-const Profile = lazy(() => import("@/pages/Profile"));
 const FormulaGuide = lazy(() => import("@/pages/FormulaGuide"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -77,7 +79,7 @@ function App() {
     // Simulate initial loading for the "OM" splash screen
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500);
+    }, 800); // Reduced from 2500ms for faster entry
     return () => clearTimeout(timer);
   }, []);
 
