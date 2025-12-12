@@ -1,7 +1,9 @@
 import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import heroBg from "@assets/generated_images/indian_wellness_scene_with_yoga_guru,_therapist_and_clients.png";
+import heroBg1 from "@assets/generated_images/indian_wellness_scene_with_yoga_guru,_therapist_and_clients.png";
+import heroBg2 from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
+import heroBg3 from "@assets/generated_images/psychologist_counseling_client_with_yoga_background.png";
 import { Heart, Sparkles, Shield, Flower, Users, IndianRupee } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
@@ -14,10 +16,13 @@ const HERO_VIDEOS = [
   "https://videos.pexels.com/video-files/7388473/7388473-uhd_2560_1440_30fps.mp4"  // Stream in woodland
 ];
 
+const HERO_IMAGES = [heroBg1, heroBg2, heroBg3];
+
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
   const [videoSrc, setVideoSrc] = useState("");
+  const [imageSrc, setImageSrc] = useState(heroBg1);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   
   // Parallax effects
@@ -28,9 +33,12 @@ export default function Home() {
   const textOpacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
-    // Randomly select a video on mount
+    // Randomly select a video AND image on mount
     const randomVideoIndex = Math.floor(Math.random() * HERO_VIDEOS.length);
     setVideoSrc(HERO_VIDEOS[randomVideoIndex]);
+
+    const randomImageIndex = Math.floor(Math.random() * HERO_IMAGES.length);
+    setImageSrc(HERO_IMAGES[randomImageIndex]);
   }, []);
 
   return (
@@ -48,7 +56,7 @@ export default function Home() {
             
             {/* Permanent Background Image - Serves as immediate visual and fallback */}
             <img 
-              src={heroBg} 
+              src={imageSrc} 
               alt="Background" 
               className="absolute inset-0 w-full h-full object-cover z-0"
               loading="eager"
