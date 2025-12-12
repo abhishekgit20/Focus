@@ -1,16 +1,52 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 
 export function SplashScreen() {
-  // Vedic Color Palette
-  const colors = {
-    saffron: "#FF9933", // Agni, Purity, Renunciation
-    kumkum: "#D32F2F",  // Auspiciousness, Shakti
-    turmeric: "#FFC107", // Knowledge, Prosperity
-    white: "#FFFFFF",   // Peace, Truth
-  };
+  // Dynamic Vedic Color Palettes
+  const palettes = [
+    {
+      name: "Agni (Fire)",
+      primary: "#FF9933", // Saffron
+      secondary: "#FFC107", // Gold
+      accent: "#D32F2F", // Kumkum Red
+      text: "#BF360C", // Deep Brown
+    },
+    {
+      name: "Akasha (Sky/Krishna)",
+      primary: "#039BE5", // Sky Blue
+      secondary: "#4FC3F7", // Light Blue
+      accent: "#FFD700", // Gold (Peacock feather)
+      text: "#01579B", // Deep Blue
+    },
+    {
+      name: "Prakriti (Nature)",
+      primary: "#43A047", // Leaf Green
+      secondary: "#81C784", // Light Green
+      accent: "#FFEB3B", // Flower Yellow
+      text: "#1B5E20", // Deep Green
+    },
+    {
+      name: "Shakti (Power)",
+      primary: "#C2185B", // Pink/Red
+      secondary: "#F48FB1", // Light Pink
+      accent: "#FFC107", // Gold
+      text: "#880E4F", // Deep Maroon
+    }
+  ];
+
+  const [currentPaletteIndex, setCurrentPaletteIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentPaletteIndex((prev) => (prev + 1) % palettes.length);
+    }, 3000); // Change palette every 3 seconds
+    return () => clearInterval(timer);
+  }, []);
+
+  const colors = palettes[currentPaletteIndex];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md transition-colors duration-1000">
       <div className="relative flex flex-col items-center justify-center">
         
         {/* Main Container */}
@@ -23,63 +59,82 @@ export function SplashScreen() {
             animate={{ rotate: 360 }}
             transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
           >
-            {/* Outer Ring - Saffron */}
-            <circle cx="50" cy="50" r="48" fill="none" stroke={colors.saffron} strokeWidth="0.5" opacity="0.8" />
-            <path d="M50 2 A48 48 0 0 1 50 98 A48 48 0 0 1 50 2 Z" fill="none" stroke={colors.saffron} strokeWidth="0.5" strokeDasharray="2 4" opacity="0.6" />
+            {/* Outer Ring */}
+            <motion.circle 
+              cx="50" cy="50" r="48" fill="none" strokeWidth="0.5" opacity="0.8"
+              animate={{ stroke: colors.primary }}
+              transition={{ duration: 1 }}
+            />
+            <motion.path 
+              d="M50 2 A48 48 0 0 1 50 98 A48 48 0 0 1 50 2 Z" fill="none" strokeWidth="0.5" strokeDasharray="2 4" opacity="0.6"
+              animate={{ stroke: colors.primary }}
+              transition={{ duration: 1 }}
+            />
             
-            {/* Radiating Lines - Turmeric/Gold */}
+            {/* Radiating Lines */}
             {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
               <motion.path
                 key={deg}
                 d="M50 50 L50 15"
-                stroke={colors.turmeric}
                 strokeWidth="0.3"
                 transform={`rotate(${deg} 50 50)`}
                 opacity="0.7"
+                animate={{ stroke: colors.secondary }}
+                transition={{ duration: 1 }}
               />
             ))}
 
-            {/* Swasti Symbols (卐) - Kumkum Red */}
+            {/* Swasti Symbols (卐) */}
             {[0, 90, 180, 270].map((deg) => (
               <g key={deg} transform={`rotate(${deg} 50 50)`}>
-                <text 
+                <motion.text 
                   x="50" 
                   y="10" 
                   fontSize="8" 
-                  fill={colors.kumkum} 
                   fontWeight="bold"
                   textAnchor="middle" 
                   dominantBaseline="middle"
-                  style={{ filter: "drop-shadow(0px 0px 2px rgba(211, 47, 47, 0.3))" }}
+                  style={{ filter: "drop-shadow(0px 0px 2px rgba(0,0,0,0.1))" }}
+                  animate={{ fill: colors.accent }}
+                  transition={{ duration: 1 }}
                 >
                   卐
-                </text>
+                </motion.text>
               </g>
             ))}
 
-            {/* Decorative Dots - Saffron */}
+            {/* Decorative Dots */}
             {[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((deg) => (
-              <circle
+              <motion.circle
                 key={deg}
                 cx="50"
                 cy="25"
                 r="1.5"
-                fill={colors.saffron}
                 transform={`rotate(${deg} 50 50)`}
                 opacity="0.8"
+                animate={{ fill: colors.primary }}
+                transition={{ duration: 1 }}
               />
             ))}
           </motion.svg>
 
           {/* Layer 2: Pulse Rings */}
           <motion.div
-            className="absolute w-44 h-44 rounded-full border border-orange-500/20"
-            animate={{ scale: [1, 1.05, 1], opacity: [0.2, 0.5, 0.2] }}
+            className="absolute w-44 h-44 rounded-full border"
+            animate={{ 
+              scale: [1, 1.05, 1], 
+              opacity: [0.2, 0.5, 0.2],
+              borderColor: colors.primary 
+            }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           />
            <motion.div
-            className="absolute w-36 h-36 rounded-full border border-yellow-500/20"
-            animate={{ scale: [1.05, 1, 1.05], opacity: [0.2, 0.5, 0.2] }}
+            className="absolute w-36 h-36 rounded-full border"
+            animate={{ 
+              scale: [1.05, 1, 1.05], 
+              opacity: [0.2, 0.5, 0.2],
+              borderColor: colors.secondary
+            }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           />
 
@@ -92,9 +147,9 @@ export function SplashScreen() {
             transition={{ duration: 1 }}
           >
             <defs>
-              <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#FFC107" />
-                <stop offset="100%" stopColor="#FF9800" />
+              <linearGradient id={`lotusGradient-${currentPaletteIndex}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={colors.secondary} />
+                <stop offset="100%" stopColor={colors.primary} />
               </linearGradient>
             </defs>
 
@@ -103,32 +158,33 @@ export function SplashScreen() {
                <motion.path
                 key={i}
                 d="M100 40 C100 40 130 80 100 100 C70 80 100 40 100 40"
-                fill="url(#lotusGradient)"
+                fill={`url(#lotusGradient-${currentPaletteIndex})`}
                 opacity="0.9"
                 transform={`rotate(${rotation} 100 100)`}
                 animate={{ 
                   d: [
                     "M100 40 C100 40 130 80 100 100 C70 80 100 40 100 40", 
                     "M100 35 C100 35 135 80 100 100 C65 80 100 35 100 35"
-                  ] 
+                  ],
+                  fill: `url(#lotusGradient-${currentPaletteIndex})` // Ensure fill updates
                 }}
                 transition={{ duration: 3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
               />
             ))}
             
             {/* Center Glow */}
-            <circle cx="100" cy="100" r="20" fill="#FFF8E1" className="blur-xl opacity-60" />
+            <circle cx="100" cy="100" r="20" fill="#FFFFFF" className="blur-xl opacity-60" />
           </motion.svg>
 
           {/* Layer 4: The Divine OM */}
           <motion.div
             className="absolute z-20 text-5xl font-serif font-bold"
-            style={{ color: "#BF360C" }} // Deep Red/Brown for OM
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ 
               opacity: 1, 
               scale: 1,
-              textShadow: "0 0 20px rgba(255, 152, 0, 0.5)"
+              color: colors.text,
+              textShadow: `0 0 20px ${colors.secondary}80`
             }}
             transition={{ duration: 1.5, ease: "easeOut" }}
           >
@@ -143,11 +199,24 @@ export function SplashScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <div className="h-px w-24 bg-gradient-to-r from-transparent via-orange-400 to-transparent" />
-          <p className="text-sm font-medium tracking-[0.4em] text-orange-800/80 uppercase">
+          <motion.div 
+            className="h-px w-24"
+            animate={{ 
+              background: `linear-gradient(90deg, transparent, ${colors.primary}, transparent)` 
+            }}
+          />
+          <motion.p 
+            className="text-sm font-medium tracking-[0.4em] uppercase"
+            animate={{ color: colors.text }}
+          >
             Focus
-          </p>
-          <div className="h-px w-24 bg-gradient-to-r from-transparent via-orange-400 to-transparent" />
+          </motion.p>
+          <motion.div 
+            className="h-px w-24"
+            animate={{ 
+              background: `linear-gradient(90deg, transparent, ${colors.primary}, transparent)` 
+            }}
+          />
         </motion.div>
 
       </div>
