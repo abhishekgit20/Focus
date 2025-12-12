@@ -28,6 +28,7 @@ import Profile from "@/pages/Profile";
 
 // Lazy load less critical pages
 const Chatbot = lazy(() => import("@/pages/Chatbot"));
+const Login = lazy(() => import("@/pages/Login"));
 const Recommendations = lazy(() => import("@/pages/Recommendations"));
 const About = lazy(() => import("@/pages/About"));
 const FormulaGuide = lazy(() => import("@/pages/FormulaGuide"));
@@ -54,6 +55,7 @@ function Router() {
           <Route path="/recommendations" component={Recommendations} />
           <Route path="/about" component={About} />
           <Route path="/chatbot" component={Chatbot} />
+          <Route path="/login" component={Login} />
           <Route path="/profile" component={Profile} />
           <Route path="/formula-guide" component={FormulaGuide} />
           <Route component={NotFound} />

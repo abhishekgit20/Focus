@@ -86,9 +86,11 @@ export function Navbar() {
             </Button>
           </Link>
 
-          <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6">
-            Get Started
-          </Button>
+          <Link href="/login">
+            <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6">
+              Login
+            </Button>
+          </Link>
         </div>
 
         {/* Mobile Nav Toggle */}
@@ -116,7 +118,9 @@ export function Navbar() {
               </a>
             </Link>
           ))}
-          <Button className="w-full bg-primary text-primary-foreground rounded-full">Get Started</Button>
+          <Link href="/login">
+            <Button className="w-full bg-primary text-primary-foreground rounded-full" onClick={() => setIsOpen(false)}>Login</Button>
+          </Link>
         </div>
       )}
     </nav>
