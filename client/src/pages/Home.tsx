@@ -29,17 +29,6 @@ export default function Home() {
     // Randomly select a video on mount
     const randomVideoIndex = Math.floor(Math.random() * HERO_VIDEOS.length);
     setVideoSrc(HERO_VIDEOS[randomVideoIndex]);
-
-    // Change video every 20 seconds for dynamic effect
-    const interval = setInterval(() => {
-      setVideoSrc(prev => {
-        const currentIndex = HERO_VIDEOS.indexOf(prev);
-        const nextIndex = (currentIndex + 1) % HERO_VIDEOS.length;
-        return HERO_VIDEOS[nextIndex];
-      });
-    }, 20000);
-
-    return () => clearInterval(interval);
   }, []);
 
   return (
