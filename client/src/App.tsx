@@ -17,6 +17,7 @@ import Therapists from "@/pages/Therapists";
 import Recommendations from "@/pages/Recommendations";
 import About from "@/pages/About";
 import Profile from "@/pages/Profile";
+import FormulaGuide from "@/pages/FormulaGuide";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
         <Route path="/recommendations" component={Recommendations} />
         <Route path="/about" component={About} />
         <Route path="/profile" component={Profile} />
+        <Route path="/formula-guide" component={FormulaGuide} />
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>

@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import {
   Tooltip,
   TooltipContent,
@@ -104,8 +105,18 @@ export default function Profile() {
           {/* Main Content */}
           <div className="flex-1 w-full space-y-8">
             <div>
-              <h1 className="text-3xl font-bold font-serif mb-2 text-foreground">My Journey</h1>
-              <p className="text-muted-foreground">Track your progress and mental wellness over time.</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-3xl font-bold font-serif mb-2 text-foreground">My Journey</h1>
+                  <p className="text-muted-foreground">Track your progress and mental wellness over time.</p>
+                </div>
+                <Link href="/formula-guide">
+                  <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
+                    <HelpCircle className="w-4 h-4" />
+                    How is this calculated?
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
