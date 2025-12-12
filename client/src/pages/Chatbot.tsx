@@ -45,7 +45,7 @@ export default function Chatbot() {
               <img src={botAvatar} alt="Gita Bot" className="w-full h-full object-cover rounded-full" />
             </div>
             <div>
-              <h2 className="font-bold text-xl font-serif text-primary-foreground flex items-center gap-2">
+              <h2 className="font-bold text-xl font-serif text-primary flex items-center gap-2">
                 Focus Wisdom Bot <Sparkles className="w-4 h-4 text-primary" />
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -81,7 +81,7 @@ export default function Chatbot() {
 
                   {msg.role === 'user' && (
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1">
-                      <User className="w-4 h-4 text-primary-foreground" />
+                      <User className="w-4 h-4 text-primary" />
                     </div>
                   )}
                 </div>
