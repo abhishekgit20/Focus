@@ -16,6 +16,9 @@ import { Loader2 } from "lucide-react";
 import yogaImg from "@assets/generated_images/yoga_session_illustration.png";
 import therapyImg from "@assets/generated_images/therapy_session_illustration.png";
 import chatImg from "@assets/generated_images/wisdom_chatbot_avatar.png";
+import heroBg1 from "@assets/generated_images/indian_wellness_scene_with_yoga_guru,_therapist_and_clients.png";
+import heroBg2 from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
+import heroBg3 from "@assets/generated_images/psychologist_counseling_client_with_yoga_background.png";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("@/pages/Home"));
@@ -60,8 +63,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Preload critical images for Services page
-    const imagesToPreload = [yogaImg, therapyImg, chatImg];
+    // Preload critical images for Services and Home page
+    const imagesToPreload = [
+      yogaImg, therapyImg, chatImg,
+      heroBg1, heroBg2, heroBg3
+    ];
     
     imagesToPreload.forEach((src) => {
       const img = new Image();

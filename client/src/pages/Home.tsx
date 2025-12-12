@@ -95,6 +95,8 @@ export default function Home() {
               alt="Background" 
               className="absolute inset-0 w-full h-full object-cover z-0 brightness-75"
               loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
 
             {/* Video Layer - Fades in over the image after a delay */}
@@ -155,8 +157,8 @@ export default function Home() {
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5 }}
               >
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 font-serif">Bridging the Gap in Mental Healthcare</h2>
                 <div className="space-y-8">
@@ -184,8 +186,8 @@ export default function Home() {
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: 0.1 }}
                 className="bg-card p-10 rounded-[2rem] shadow-xl border border-primary/10 relative overflow-hidden"
               >
                 {/* Decorative background circle */}
@@ -201,7 +203,7 @@ export default function Home() {
                       key={i} 
                       initial={{ opacity: 0, x: 20 }}
                       whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + (i * 0.1) }}
+                      transition={{ delay: 0.2 + (i * 0.05) }}
                       className="flex items-center gap-3"
                     >
                       <div className="w-2.5 h-2.5 rounded-full bg-secondary shrink-0" />
@@ -260,10 +262,10 @@ export default function Home() {
               ].map((testimonial, i) => (
                 <motion.div 
                   key={i}
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.05, duration: 0.4 }}
+                  viewport={{ once: true, margin: "-50px" }}
                   className="bg-muted/30 p-8 rounded-3xl border relative"
                 >
                   <Quote className="w-10 h-10 text-primary/20 absolute top-6 left-6" />
@@ -324,11 +326,11 @@ export default function Home() {
               ].map((feature, i) => (
                 <motion.div 
                   key={i}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.2 }}
-                  whileHover={{ y: -10 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ delay: i * 0.1, duration: 0.4 }}
+                  whileHover={{ y: -5 }}
                   className="p-8 rounded-3xl bg-muted/30 border border-muted hover:shadow-xl transition-all duration-300 group"
                 >
                   <div className={`w-16 h-16 rounded-2xl ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
