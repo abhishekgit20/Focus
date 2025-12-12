@@ -3,32 +3,94 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
-import { Send, User, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Send, User, Sparkles, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { GITA_VERSES, FALLBACK_QUOTES } from "@/lib/gitaData";
+
+interface Message {
+  role: string;
+  text: string;
+  sanskrit?: string;
+  purport?: string;
+  source?: string;
+}
 
 export default function Chatbot() {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     { 
       role: "bot", 
-      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita and ancient mindfulness practices. What is troubling your mind today?" 
+      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, or grief?",
+      source: "Gita Bot"
     }
   ]);
   const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const findGitaWisdom = (text: string) => {
+    const lowerText = text.toLowerCase();
+    
+    // Check keywords
+    if (lowerText.includes("stress") || lowerText.includes("anx") || lowerText.includes("worry")) return GITA_VERSES["stress"][Math.floor(Math.random() * GITA_VERSES["stress"].length)];
+    if (lowerText.includes("ang") || lowerText.includes("rage") || lowerText.includes("mad")) return GITA_VERSES["anger"][0];
+    if (lowerText.includes("confus") || lowerText.includes("lost") || lowerText.includes("decid")) return GITA_VERSES["confusion"][0];
+    if (lowerText.includes("grief") || lowerText.includes("sad") || lowerText.includes("cry") || lowerText.includes("loss")) return GITA_VERSES["grief"][0];
+    if (lowerText.includes("focus") || lowerText.includes("mind") || lowerText.includes("distract")) return GITA_VERSES["focus"][0];
+    
+    return null;
+  };
+
+  const handleSend = async () => {
     if (!input.trim()) return;
     
-    const newMessages = [...messages, { role: "user", text: input }];
-    setMessages(newMessages);
+    const userMsg = { role: "user", text: input };
+    setMessages(prev => [...prev, userMsg]);
     setInput("");
+    setIsTyping(true);
 
-    // Simulate bot response with Gita wisdom
-    setTimeout(() => {
-      setMessages([...newMessages, { 
-        role: "bot", 
-        text: "In the Bhagavad Gita, Krishna says: 'You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions.' Focus on the present moment and your efforts, rather than worrying about the outcome. This will bring you peace." 
-      }]);
-    }, 2000);
+    // Analyze text for keywords
+    const wisdom = findGitaWisdom(input);
+    
+    setTimeout(async () => {
+      let botResponse;
+
+      if (wisdom) {
+        botResponse = {
+          role: "bot",
+          text: wisdom.translation,
+          sanskrit: wisdom.text,
+          purport: wisdom.purport,
+          source: `Bhagavad Gita ${wisdom.chapter}.${wisdom.verse}`
+        };
+      } else {
+        // Fallback to external API or random quote
+        try {
+          const res = await fetch('https://dummyjson.com/quotes/random');
+          const data = await res.json();
+          botResponse = {
+            role: "bot",
+            text: data.quote,
+            source: data.author
+          };
+        } catch (e) {
+          const randomQuote = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+          botResponse = {
+            role: "bot",
+            text: randomQuote,
+            source: "Ancient Wisdom"
+          };
+        }
+      }
+
+      setMessages(prev => [...prev, botResponse]);
+      setIsTyping(false);
+    }, 1500);
   };
 
   return (
@@ -55,8 +117,8 @@ export default function Chatbot() {
           </div>
 
           {/* Messages Area */}
-          <ScrollArea className="flex-grow p-6 bg-slate-50/50 relative z-10">
-            <div className="space-y-6">
+          <ScrollArea className="flex-grow bg-slate-50/50 relative z-10">
+            <div className="p-6 space-y-6" ref={scrollRef}>
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'bot' && (
@@ -71,10 +133,20 @@ export default function Chatbot() {
                       ? 'bg-primary text-primary-foreground rounded-tr-none' 
                       : 'bg-white border rounded-tl-none text-foreground'}
                   `}>
-                    {msg.text}
+                    {msg.sanskrit && (
+                      <p className="font-serif text-primary/80 mb-2 italic text-xs border-l-2 border-primary/20 pl-2">
+                        {msg.sanskrit}
+                      </p>
+                    )}
+                    <p>{msg.text}</p>
+                    {msg.purport && (
+                      <p className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                        <strong>Insight:</strong> {msg.purport}
+                      </p>
+                    )}
                     {msg.role === 'bot' && (
                       <div className="mt-3 pt-3 border-t border-muted/50 text-xs text-muted-foreground italic flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> Wisdom from the Gita
+                        <Sparkles className="w-3 h-3" /> {msg.source}
                       </div>
                     )}
                   </div>
@@ -86,6 +158,18 @@ export default function Chatbot() {
                   )}
                 </div>
               ))}
+              {isTyping && (
+                <div className="flex gap-4 justify-start">
+                   <div className="w-8 h-8 rounded-full bg-white border overflow-hidden shrink-0 mt-1">
+                      <img src={botAvatar} alt="Bot" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="bg-white border rounded-2xl rounded-tl-none p-4 shadow-sm flex items-center gap-1">
+                      <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
 
@@ -96,15 +180,17 @@ export default function Chatbot() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask for guidance..."
+                placeholder="How are you feeling? (e.g. stressed, angry, confused)"
                 className="rounded-full bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary pl-6 py-6"
+                disabled={isTyping}
               />
               <Button 
                 onClick={handleSend}
                 size="icon" 
                 className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 shrink-0"
+                disabled={isTyping || !input.trim()}
               >
-                <Send className="w-5 h-5" />
+                {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </Button>
             </div>
             <p className="text-[10px] text-center text-muted-foreground mt-2">
