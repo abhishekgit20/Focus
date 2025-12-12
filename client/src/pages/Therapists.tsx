@@ -63,6 +63,17 @@ const professionals = [
 export default function Therapists() {
   const [filter, setFilter] = useState("All");
 
+  const filteredProfessionals = professionals.filter(prof => {
+    if (filter === "All") return true;
+    if (filter === "Psychologists") {
+      return ["Clinical Psychologist", "Psychiatrist", "Therapist"].includes(prof.title);
+    }
+    if (filter === "Yoga Gurus") {
+      return prof.title.includes("Yoga");
+    }
+    return true;
+  });
+
   return (
     <PageTransition>
       <div className="container mx-auto px-4 py-12">
@@ -75,10 +86,25 @@ export default function Therapists() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2">
+            <Button 
+              variant={filter === "All" ? "default" : "outline"}
+              onClick={() => setFilter("All")}
+              className="gap-2"
+            >
+              All
+            </Button>
+            <Button 
+              variant={filter === "Psychologists" ? "default" : "outline"}
+              onClick={() => setFilter("Psychologists")}
+              className="gap-2"
+            >
               Psychologists
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button 
+              variant={filter === "Yoga Gurus" ? "default" : "outline"}
+              onClick={() => setFilter("Yoga Gurus")}
+              className="gap-2"
+            >
               Yoga Gurus
             </Button>
             <Button variant="ghost" size="icon">
@@ -88,7 +114,7 @@ export default function Therapists() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {professionals.map((prof) => (
+          {filteredProfessionals.map((prof) => (
             <div key={prof.id} className="bg-card border rounded-2xl p-6 flex flex-col sm:flex-row gap-6 hover:shadow-lg transition-all duration-300 group">
               <div className="shrink-0 relative">
                 <img 
