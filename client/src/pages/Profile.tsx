@@ -35,21 +35,21 @@ export default function Profile() {
         <div className="flex flex-col md:flex-row gap-8 items-start">
           
           {/* Sidebar / User Info */}
-          <div className="w-full md:w-1/3 lg:w-1/4 space-y-6">
+          <div className="w-full md:w-1/3 lg:w-1/4 space-y-6 sticky top-24 self-start">
             <Card className="overflow-hidden border-none shadow-lg">
               <div className="h-32 bg-gradient-to-r from-orange-100 to-orange-200"></div>
-              <div className="px-6 pb-6 relative">
-                <div className="w-20 h-20 rounded-full bg-white p-1 absolute -top-10 shadow-md">
+              <div className="px-6 pb-6 relative text-center">
+                <div className="w-24 h-24 rounded-full bg-white p-1 absolute -top-12 left-1/2 -translate-x-1/2 shadow-md">
                   <img 
                     src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" 
                     alt="User" 
                     className="w-full h-full rounded-full object-cover"
                   />
                 </div>
-                <div className="mt-12">
-                  <h2 className="text-2xl font-bold font-serif">Aditya Kumar</h2>
+                <div className="mt-14">
+                  <h2 className="text-2xl font-bold font-serif text-foreground">Aditya Kumar</h2>
                   <p className="text-muted-foreground">Focus Member since 2024</p>
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-2 mt-4 justify-center">
                     <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200">Premium</Badge>
                     <Badge variant="outline">Level 5</Badge>
                   </div>
@@ -86,7 +86,7 @@ export default function Profile() {
           {/* Main Content */}
           <div className="flex-1 w-full space-y-8">
             <div>
-              <h1 className="text-3xl font-bold font-serif mb-2">My Journey</h1>
+              <h1 className="text-3xl font-bold font-serif mb-2 text-foreground">My Journey</h1>
               <p className="text-muted-foreground">Track your progress and mental wellness over time.</p>
             </div>
 
