@@ -1,6 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
+// Create a motion component for the SVG stop element to animate gradients
+const MotionStop = motion.create("stop");
+
 export function SplashScreen() {
   // Dynamic Vedic Color Palettes
   const palettes = [
@@ -10,13 +13,15 @@ export function SplashScreen() {
       secondary: "#FFC107", // Gold
       accent: "#D32F2F", // Kumkum Red
       text: "#BF360C", // Deep Brown
+      bg: "#FFF3E0" // Light Orange tint
     },
     {
       name: "Akasha (Sky/Krishna)",
       primary: "#039BE5", // Sky Blue
       secondary: "#4FC3F7", // Light Blue
-      accent: "#FFD700", // Gold (Peacock feather)
+      accent: "#FFD700", // Gold
       text: "#01579B", // Deep Blue
+      bg: "#E1F5FE" // Light Blue tint
     },
     {
       name: "Prakriti (Nature)",
@@ -24,6 +29,7 @@ export function SplashScreen() {
       secondary: "#81C784", // Light Green
       accent: "#FFEB3B", // Flower Yellow
       text: "#1B5E20", // Deep Green
+      bg: "#E8F5E9" // Light Green tint
     },
     {
       name: "Shakti (Power)",
@@ -31,6 +37,7 @@ export function SplashScreen() {
       secondary: "#F48FB1", // Light Pink
       accent: "#FFC107", // Gold
       text: "#880E4F", // Deep Maroon
+      bg: "#FCE4EC" // Light Pink tint
     }
   ];
 
@@ -46,8 +53,15 @@ export function SplashScreen() {
   const colors = palettes[currentPaletteIndex];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md transition-colors duration-1000">
-      <div className="relative flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
+      {/* Animated Background Overlay */}
+      <motion.div 
+        className="absolute inset-0 bg-background/90 backdrop-blur-md"
+        animate={{ backgroundColor: colors.bg }}
+        transition={{ duration: 1.5 }}
+      />
+      
+      <div className="relative flex flex-col items-center justify-center z-10">
         
         {/* Main Container */}
         <div className="relative w-64 h-64 flex items-center justify-center">
@@ -147,9 +161,9 @@ export function SplashScreen() {
             transition={{ duration: 1 }}
           >
             <defs>
-              <linearGradient id={`lotusGradient-${currentPaletteIndex}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor={colors.secondary} />
-                <stop offset="100%" stopColor={colors.primary} />
+              <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <MotionStop offset="0%" animate={{ stopColor: colors.secondary }} transition={{ duration: 1 }} />
+                <MotionStop offset="100%" animate={{ stopColor: colors.primary }} transition={{ duration: 1 }} />
               </linearGradient>
             </defs>
 
@@ -158,15 +172,14 @@ export function SplashScreen() {
                <motion.path
                 key={i}
                 d="M100 40 C100 40 130 80 100 100 C70 80 100 40 100 40"
-                fill={`url(#lotusGradient-${currentPaletteIndex})`}
+                fill="url(#lotusGradient)"
                 opacity="0.9"
                 transform={`rotate(${rotation} 100 100)`}
                 animate={{ 
                   d: [
                     "M100 40 C100 40 130 80 100 100 C70 80 100 40 100 40", 
                     "M100 35 C100 35 135 80 100 100 C65 80 100 35 100 35"
-                  ],
-                  fill: `url(#lotusGradient-${currentPaletteIndex})` // Ensure fill updates
+                  ]
                 }}
                 transition={{ duration: 3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
               />
