@@ -154,13 +154,25 @@ export default function Recommendations() {
       if (!query.trim()) {
         setResults(mockDatabase);
       } else {
-        // Simple mock filtering
-        const filtered = mockDatabase.filter(item => 
-          item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
-          item.description.toLowerCase().includes(query.toLowerCase())
-        );
-        setResults(filtered);
+        // Improved search logic: Split query into keywords and check for matches
+        const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2); // Ignore very short words
+        
+        if (searchTerms.length === 0) {
+           // If only short words were typed, fall back to exact substring match of original query
+           const filtered = mockDatabase.filter(item => 
+             item.title.toLowerCase().includes(query.toLowerCase()) ||
+             item.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
+             item.description.toLowerCase().includes(query.toLowerCase())
+           );
+           setResults(filtered);
+        } else {
+           // Filter items that match ANY of the significant search terms
+           const filtered = mockDatabase.filter(item => {
+             const itemText = `${item.title} ${item.description} ${item.tags.join(' ')}`.toLowerCase();
+             return searchTerms.some(term => itemText.includes(term));
+           });
+           setResults(filtered);
+        }
       }
       setIsSearching(false);
     }, 1500);
