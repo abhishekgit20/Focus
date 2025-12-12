@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Calendar, Filter, IndianRupee } from "lucide-react";
 import { useState } from "react";
 import { FilterPanel } from "@/components/FilterPanel";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock Data - Indian Context
 const professionals = [
@@ -64,6 +66,26 @@ const professionals = [
 export default function Therapists() {
   const [filter, setFilter] = useState("All");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string[]>>({});
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const handleBookAppointment = (profName: string) => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    
+    if (!isLoggedIn) {
+      toast({
+        title: "Login Required",
+        description: "Please sign in to book an appointment with our professionals.",
+        variant: "destructive",
+      });
+      setLocation("/login");
+    } else {
+      toast({
+        title: "Booking Request Sent",
+        description: `We have notified ${profName}. They will contact you shortly.`,
+      });
+    }
+  };
 
   const filteredProfessionals = professionals.filter(prof => {
     // 1. Basic Filters (Buttons)
@@ -188,7 +210,12 @@ export default function Therapists() {
                 </div>
 
                 <div className="flex gap-3 mt-auto">
-                  <Button className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm">Book Appointment</Button>
+                  <Button 
+                    className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
+                    onClick={() => handleBookAppointment(prof.name)}
+                  >
+                    Book Appointment
+                  </Button>
                   <Button variant="outline" className="rounded-full text-sm">View Profile</Button>
                 </div>
               </div>
