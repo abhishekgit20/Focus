@@ -12,7 +12,7 @@ export default function About() {
           
           <div>
             <span className="text-primary font-bold tracking-wider text-sm uppercase mb-2 block">Our Mission</span>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif text-primary-foreground">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif text-foreground">
               Focus: Integrated Mental Health for India
             </h1>
             <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
@@ -20,7 +20,7 @@ export default function About() {
               Stigma, lack of resources in rural areas, and limited affordability create massive barriers to care.
             </p>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              <strong className="text-primary-foreground">Focus</strong> was built to solve this. We are bridging the gap by connecting patients with psychiatrists, psychologists, and yoga gurus through a single, holistic platform.
+              <strong className="text-foreground">Focus</strong> was built to solve this. We are bridging the gap by connecting patients with psychiatrists, psychologists, and yoga gurus through a single, holistic platform.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
