@@ -48,31 +48,31 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link href="/about">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between relative">
+        <div className="flex items-center">
+          <Link href="/">
             <a className="text-2xl font-serif font-bold text-primary flex items-center gap-2 drop-shadow-sm hover:opacity-90 transition-opacity">
               Focus
             </a>
           </Link>
+        </div>
 
-          {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-6">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <a
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary",
-                    location === link.href
-                      ? "text-primary font-bold"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {link.label}
-                </a>
-              </Link>
-            ))}
-          </div>
+        {/* Desktop Nav Links - Centered */}
+        <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
+          {links.map((link) => (
+            <Link key={link.href} href={link.href}>
+              <a
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  location === link.href
+                    ? "text-primary font-bold"
+                    : "text-muted-foreground"
+                )}
+              >
+                {link.label}
+              </a>
+            </Link>
+          ))}
         </div>
 
         {/* Desktop Actions */}
