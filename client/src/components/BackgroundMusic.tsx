@@ -235,7 +235,7 @@ export function BackgroundMusic() {
     <>
       {/* Hidden React Player for Custom Tracks */}
       {isCustomTrack && (
-        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', visibility: 'hidden' }}>
+        <div style={{ position: 'fixed', bottom: 0, right: 0, width: '1px', height: '1px', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
           <ReactPlayer
             ref={playerRef as any}
             url={currentTrack.src}
@@ -248,9 +248,18 @@ export function BackgroundMusic() {
             onReady={() => console.log("ReactPlayer Ready")}
             onStart={() => console.log("ReactPlayer Started")}
             onPlay={() => console.log("ReactPlayer Playing")}
+            playsinline={true}
             config={{
               youtube: {
-                playerVars: { showinfo: 0, controls: 0, disablekb: 1 }
+                playerVars: { 
+                  showinfo: 0, 
+                  controls: 0, 
+                  disablekb: 1,
+                  origin: window.location.origin
+                }
+              },
+              file: {
+                forceAudio: true
               }
             }}
           />
