@@ -32,12 +32,13 @@ const TRACK = {
 };
 
 // Actual URL for "Parvati Panchakam | Sounds of Isha | @LingaBhairavi"
-// Updated to user provided playlist link
-const PARVATI_PANCHAKAM_URL = "https://www.youtube.com/watch?v=DnVK9mp68Zw&list=RDDnVK9mp68Zw&start_radio=1";
+// Using the direct video ID from the user provided link: DnVK9mp68Zw
+const PARVATI_PANCHAKAM_URL = "https://www.youtube.com/watch?v=DnVK9mp68Zw";
 
 export function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef<ReactPlayer | null>(null);
+  const [volume, setVolume] = useState(0.5);
 
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
@@ -45,14 +46,14 @@ export function BackgroundMusic() {
 
   return (
     <div className="fixed bottom-6 left-6 z-50">
-      {/* Hidden Player */}
-      <div style={{ position: 'fixed', bottom: 0, right: 0, width: '1px', height: '1px', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
+      {/* Hidden Player - keeping it in DOM but invisible */}
+      <div className="fixed bottom-0 right-0 opacity-0 pointer-events-none w-1 h-1 overflow-hidden z-[-1]">
         <ReactPlayer
           ref={playerRef as any}
           url={PARVATI_PANCHAKAM_URL}
           playing={isPlaying}
           loop={true}
-          volume={0.5}
+          volume={volume}
           width="100%"
           height="100%"
           onError={(e: any) => console.error("ReactPlayer Error:", e)}
@@ -63,6 +64,7 @@ export function BackgroundMusic() {
                 showinfo: 0, 
                 controls: 0, 
                 disablekb: 1,
+                modestbranding: 1,
                 origin: window.location.origin
               }
             }
