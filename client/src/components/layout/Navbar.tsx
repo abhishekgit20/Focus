@@ -1,18 +1,25 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Globe } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [lang, setLang] = useState("English");
 
   const links = [
     { href: "/", label: "Home" },
     { href: "/services", label: "Services" },
-    { href: "/therapists", label: "Therapists" },
-    { href: "/chatbot", label: "AI Guide" },
+    { href: "/therapists", label: "Professionals" },
+    { href: "/chatbot", label: "Gita Bot" },
     { href: "/about", label: "About" },
   ];
 
@@ -21,7 +28,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/">
           <a className="text-2xl font-serif font-bold text-primary-foreground flex items-center gap-2">
-            SereneMind
+            Focus
           </a>
         </Link>
 
@@ -41,6 +48,21 @@ export function Navbar() {
               </a>
             </Link>
           ))}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+                <Globe className="w-4 h-4" /> {lang}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setLang("English")}>English</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Hindi")}>Hindi</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Tamil")}>Tamil</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Bengali")}>Bengali</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
             Get Started
           </Button>

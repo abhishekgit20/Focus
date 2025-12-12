@@ -2,26 +2,39 @@ import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Target, TrendingUp } from "lucide-react";
 
 export default function About() {
   return (
     <PageTransition>
       <div className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
+        <div className="grid md:grid-cols-2 gap-16 items-start">
           
           <div>
             <span className="text-primary font-bold tracking-wider text-sm uppercase mb-2 block">Our Mission</span>
             <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif text-primary-foreground">
-              Making mental wellness accessible to everyone
+              Focus: Integrated Mental Health for India
             </h1>
             <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-              SereneMind was founded on the belief that mental health support should be calm, accessible, and stigmatized-free. 
-              We combine cutting-edge technology with compassionate human care to create a safe harbor for your mind.
+              With over 200 million people in India affected by mental health disorders, the need for accessible infrastructure has never been greater. 
+              Stigma, lack of resources in rural areas, and limited affordability create massive barriers to care.
             </p>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Whether you need a professional therapist, a quick mindfulness break, or just someone to listen at 3 AM, we are here for you.
+              <strong className="text-primary-foreground">Focus</strong> was built to solve this. We are bridging the gap by connecting patients with psychiatrists, psychologists, and yoga gurus through a single, holistic platform.
             </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+              <div className="bg-muted/30 p-6 rounded-2xl border">
+                <Target className="w-8 h-8 text-primary mb-4" />
+                <h3 className="font-bold mb-2">Our Goal</h3>
+                <p className="text-sm text-muted-foreground">To make mental healthcare accessible, affordable, and destigmatized for every Indian, from metros to villages.</p>
+              </div>
+              <div className="bg-muted/30 p-6 rounded-2xl border">
+                <TrendingUp className="w-8 h-8 text-secondary-foreground mb-4" />
+                <h3 className="font-bold mb-2">Market Growth</h3>
+                <p className="text-sm text-muted-foreground">Aligning with the National Mental Health Program (NMHP) to serve the growing demand in Tier 2 & 3 cities.</p>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div className="flex items-center gap-4">
@@ -30,7 +43,7 @@ export default function About() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Email Us</p>
-                  <p className="text-muted-foreground">support@serenemind.com</p>
+                  <p className="text-muted-foreground">support@focusindia.com</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -39,28 +52,29 @@ export default function About() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Call Us</p>
-                  <p className="text-muted-foreground">+1 (888) 123-4567</p>
+                  <p className="text-muted-foreground">+91 98765 43210</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-card border rounded-3xl p-8 shadow-lg">
-            <h3 className="text-2xl font-bold mb-6 font-serif">Get in Touch</h3>
+          <div className="bg-card border rounded-3xl p-8 shadow-lg sticky top-24">
+            <h3 className="text-2xl font-bold mb-6 font-serif">Contact Us</h3>
+            <p className="text-muted-foreground mb-6">Have questions or want to partner with us? Reach out today.</p>
             <form className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">First Name</label>
-                  <Input placeholder="Jane" />
+                  <Input placeholder="Aditya" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Last Name</label>
-                  <Input placeholder="Doe" />
+                  <Input placeholder="Kumar" />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
-                <Input placeholder="jane@example.com" />
+                <Input placeholder="aditya@example.com" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Message</label>
