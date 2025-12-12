@@ -54,7 +54,7 @@ export default function Login() {
           </Link>
 
           <div className="w-full max-w-md space-y-8">
-            <div className="text-center">
+            <div className="text-left">
               <h1 className="text-4xl font-serif font-bold text-primary mb-2">Welcome Back</h1>
               <p className="text-muted-foreground">Sign in to continue your journey to wellness.</p>
             </div>
