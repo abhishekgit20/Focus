@@ -46,7 +46,7 @@ export default function Profile() {
                     className="w-full h-full rounded-full object-cover"
                   />
                 </div>
-                <div className="mt-14">
+                <div className="mt-16">
                   <h2 className="text-2xl font-bold font-serif text-foreground">Aditya Kumar</h2>
                   <p className="text-muted-foreground">Focus Member since 2024</p>
                   <div className="flex gap-2 mt-4 justify-center">
@@ -91,38 +91,38 @@ export default function Profile() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm overflow-hidden">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="p-3 bg-white rounded-full text-blue-500 shadow-sm">
+                  <div className="p-3 bg-white rounded-full text-blue-500 shadow-sm shrink-0">
                     <TrendingUp className="w-6 h-6" />
                   </div>
-                  <div>
-                    <p className="text-sm text-blue-600 font-medium">Current Streak</p>
-                    <h3 className="text-2xl font-bold text-blue-900">5 Days</h3>
+                  <div className="min-w-0">
+                    <p className="text-sm text-blue-600 font-medium truncate">Current Streak</p>
+                    <h3 className="text-2xl font-bold text-blue-900 truncate">5 Days</h3>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm overflow-hidden">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="p-3 bg-white rounded-full text-purple-500 shadow-sm">
+                  <div className="p-3 bg-white rounded-full text-purple-500 shadow-sm shrink-0">
                     <Award className="w-6 h-6" />
                   </div>
-                  <div>
-                    <p className="text-sm text-purple-600 font-medium">Total Badges</p>
-                    <h3 className="text-2xl font-bold text-purple-900">8 Earned</h3>
+                  <div className="min-w-0">
+                    <p className="text-sm text-purple-600 font-medium truncate">Total Badges</p>
+                    <h3 className="text-2xl font-bold text-purple-900 truncate">8 Earned</h3>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm overflow-hidden">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="p-3 bg-white rounded-full text-green-500 shadow-sm">
+                  <div className="p-3 bg-white rounded-full text-green-500 shadow-sm shrink-0">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <div>
-                    <p className="text-sm text-green-600 font-medium">Total Practice</p>
-                    <h3 className="text-2xl font-bold text-green-900">12.5 Hrs</h3>
+                  <div className="min-w-0">
+                    <p className="text-sm text-green-600 font-medium truncate">Total Practice</p>
+                    <h3 className="text-2xl font-bold text-green-900 truncate">12.5 Hrs</h3>
                   </div>
                 </CardContent>
               </Card>
