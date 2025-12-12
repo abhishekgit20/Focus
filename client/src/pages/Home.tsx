@@ -86,14 +86,14 @@ export default function Home() {
             className="container mx-auto px-4 relative z-20 text-center"
           >
             <div className="max-w-4xl mx-auto">
-              <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white text-sm font-medium mb-6 backdrop-blur-md border border-white/30">
+              <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary-foreground font-medium mb-6 backdrop-blur-sm border border-primary/20">
                 Integrated Mental Health for India
               </span>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-lg">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-foreground drop-shadow-sm">
                 Ancient Wisdom Meets <br />
                 <span className="text-primary italic">Modern Care</span>
               </h1>
-              <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
+              <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-medium">
                 Connect with verified psychiatrists, therapists, and yoga gurus. 
                 Experience holistic healing with our Bhagavad Gita-inspired AI guide.
               </p>
@@ -104,7 +104,7 @@ export default function Home() {
                   </Button>
                 </Link>
                 <Link href="/chatbot">
-                  <Button size="lg" variant="outline" className="rounded-full text-lg px-8 py-6 border-2 bg-white/10 text-white border-white/30 backdrop-blur-md hover:bg-white/20 hover:text-white hover:border-white transition-all">
+                  <Button size="lg" variant="outline" className="rounded-full text-lg px-8 py-6 border-2 border-foreground/20 text-foreground bg-background/50 backdrop-blur-sm hover:bg-foreground/5 hover:text-primary hover:border-primary transition-all">
                     Chat with Gita Bot
                   </Button>
                 </Link>
