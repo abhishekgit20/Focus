@@ -3,13 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Target, TrendingUp, AlertTriangle } from "lucide-react";
-import { CrisisBanner } from "@/components/CrisisBanner";
 
 export default function About() {
   return (
     <PageTransition>
       <div className="relative">
-        <CrisisBanner />
         <div className="container mx-auto px-4 py-16">
           <div className="grid md:grid-cols-2 gap-16 items-start">
             
