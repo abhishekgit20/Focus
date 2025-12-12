@@ -41,7 +41,7 @@ export default function Profile() {
         <div className="flex flex-col md:flex-row gap-8 items-start">
           
           {/* Sidebar / User Info */}
-          <div className="w-full md:w-1/3 lg:w-1/4 space-y-6 sticky top-24 self-start">
+          <div className="w-full md:w-1/3 lg:w-1/4 space-y-6">
             <Card className="overflow-hidden border-none shadow-lg">
               <div className="h-32 bg-gradient-to-r from-orange-100 to-orange-200"></div>
               <div className="px-6 pb-6 relative text-center pt-16">
