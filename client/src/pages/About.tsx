@@ -2,15 +2,18 @@ import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, Target, TrendingUp } from "lucide-react";
+import { Mail, Phone, MapPin, Target, TrendingUp, AlertTriangle } from "lucide-react";
+import { CrisisBanner } from "@/components/CrisisBanner";
 
 export default function About() {
   return (
     <PageTransition>
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-16 items-start">
-          
-          <div>
+      <div className="relative">
+        <CrisisBanner />
+        <div className="container mx-auto px-4 py-16">
+          <div className="grid md:grid-cols-2 gap-16 items-start">
+            
+            <div>
             <span className="text-primary font-bold tracking-wider text-sm uppercase mb-2 block">Our Mission</span>
             <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif text-foreground">
               Focus: Integrated Mental Health for India
@@ -53,6 +56,15 @@ export default function About() {
                 <div>
                   <p className="text-sm font-medium">Call Us</p>
                   <p className="text-muted-foreground">+91 98765 43210</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 animate-pulse">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-red-600">Emergency Crisis Line</p>
+                  <p className="text-muted-foreground">1800-599-0019 (24/7)</p>
                 </div>
               </div>
             </div>
