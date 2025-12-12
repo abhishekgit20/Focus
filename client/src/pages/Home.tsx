@@ -1,7 +1,7 @@
 import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import heroBg from "@assets/generated_images/indian_wellness_hero.png";
+import heroBg from "@assets/generated_images/indian_wellness_scene_with_yoga_guru,_therapist_and_clients.png";
 import { Heart, Sparkles, Shield, Flower, Users, IndianRupee } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
