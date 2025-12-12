@@ -155,7 +155,24 @@ export default function Profile() {
               <TabsContent value="mood" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Weekly Mood Analysis</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Weekly Mood Analysis</CardTitle>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-semibold mb-1">Mood Score Calculation</p>
+                            <ul className="text-xs space-y-1">
+                              <li><span className="font-medium text-green-600">8-10:</span> Great (Positive)</li>
+                              <li><span className="font-medium text-yellow-600">4-7:</span> Okay (Neutral)</li>
+                              <li><span className="font-medium text-red-600">1-3:</span> Stressed (Needs Care)</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <CardDescription>How you've been feeling this week</CardDescription>
                   </CardHeader>
                   <CardContent className="h-[300px]">
