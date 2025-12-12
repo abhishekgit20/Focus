@@ -26,7 +26,7 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/">
+        <Link href="/about">
           <a className="text-2xl font-serif font-bold text-primary flex items-center gap-2 drop-shadow-sm">
             Focus
           </a>
