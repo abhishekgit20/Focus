@@ -37,28 +37,24 @@ export default function Home() {
     <PageTransition>
       <div ref={containerRef} className="relative overflow-hidden">
         {/* Parallax Hero Section */}
-        <section className="relative h-[90vh] flex items-center justify-center overflow-hidden">
+        <section className="relative h-[90vh] flex items-center justify-center overflow-hidden bg-slate-900">
           {/* Background Layer - Moves slower */}
           <motion.div 
             style={{ y: heroY, opacity: heroOpacity }}
-            className="absolute inset-0 z-0 bg-neutral-900" // Dark background to prevent white flash
+            className="absolute inset-0 z-0"
           >
-             <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background z-20" />
+             {/* Gradient Overlay - Always on top of media */}
+             <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background z-20 pointer-events-none" />
             
-            {/* Fallback Image - Visible while video loads */}
-            <AnimatePresence>
-              {!isVideoLoaded && (
-                <motion.img 
-                  initial={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1 }}
-                  src={heroBg}
-                  alt="Background Placeholder"
-                  className="absolute inset-0 w-full h-full object-cover z-10"
-                />
-              )}
-            </AnimatePresence>
+            {/* Permanent Background Image - Serves as immediate visual and fallback */}
+            <img 
+              src={heroBg} 
+              alt="Background" 
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              loading="eager"
+            />
 
+            {/* Video Layer - Fades in over the image */}
             {videoSrc && (
               <video 
                 src={videoSrc}
@@ -66,8 +62,9 @@ export default function Home() {
                 muted 
                 loop 
                 playsInline
+                preload="auto"
                 onCanPlay={() => setIsVideoLoaded(true)}
-                className={`w-full h-full object-cover transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ease-in-out ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
           </motion.div>
