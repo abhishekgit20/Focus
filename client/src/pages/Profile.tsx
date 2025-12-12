@@ -4,16 +4,30 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const MOOD_DATA = [
   { day: "Mon", score: 6 },
@@ -36,6 +50,29 @@ const ACTIVITY_DATA = [
 ];
 
 export default function Profile() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [journalEntry, setJournalEntry] = useState("");
+
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn) {
+      setLocation("/login");
+    }
+  }, [setLocation]);
+
+  const handleSaveJournal = () => {
+    if (!journalEntry.trim()) return;
+    
+    toast({
+      title: "Journal Entry Saved",
+      description: "You earned +20 XP for your reflection!",
+    });
+    setJournalEntry("");
+    setIsJournalOpen(false);
+  };
+
   return (
     <PageTransition>
       <div className="container mx-auto px-4 py-12">
@@ -253,7 +290,47 @@ export default function Profile() {
                       <p className="text-sm text-muted-foreground italic mb-3">
                         "Today I felt a bit anxious about work, but the breathing exercise really helped center me."
                       </p>
-                      <Button variant="link" className="p-0 h-auto text-primary">Write new entry &rarr;</Button>
+                      
+                      <Dialog open={isJournalOpen} onOpenChange={setIsJournalOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="link" className="p-0 h-auto text-primary gap-1">
+                            Write new entry <PenLine className="w-3 h-3" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle>Daily Reflection</DialogTitle>
+                            <DialogDescription>
+                              Journaling helps clear the mind. How are you feeling right now?
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="mood">Current Mood</Label>
+                              <div className="flex gap-2">
+                                {['Stressed', 'Okay', 'Good', 'Great'].map((m) => (
+                                  <Badge key={m} variant="outline" className="cursor-pointer hover:bg-primary/10 px-3 py-1">
+                                    {m}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="entry">Your Thoughts</Label>
+                              <Textarea 
+                                id="entry" 
+                                placeholder="I am feeling..." 
+                                className="min-h-[150px]"
+                                value={journalEntry}
+                                onChange={(e) => setJournalEntry(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button onClick={handleSaveJournal} className="rounded-full">Save Entry (+20 XP)</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </CardContent>
                   </Card>
                 </div>
