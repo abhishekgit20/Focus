@@ -207,11 +207,11 @@ export default function Profile() {
                           <span className="text-[10px] font-bold text-muted-foreground group-hover:text-yellow-700 uppercase">Okay</span>
                         </button>
 
-                        <button className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-green-200 bg-green-50 transition-all shadow-sm cursor-pointer">
-                          <div className="p-1.5 rounded-full bg-green-100 text-green-600 scale-105 shadow-sm">
+                        <button className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-green-200 hover:bg-green-50 transition-all cursor-pointer">
+                          <div className="p-1.5 rounded-full bg-green-100 text-green-600 group-hover:scale-110 transition-transform shadow-sm">
                             <Smile className="w-4 h-4" />
                           </div>
-                          <span className="text-[10px] font-bold text-green-700 uppercase">Great</span>
+                          <span className="text-[10px] font-bold text-muted-foreground group-hover:text-green-700 uppercase">Great</span>
                         </button>
                       </div>
                     </CardContent>
