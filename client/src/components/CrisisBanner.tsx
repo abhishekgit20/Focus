@@ -1,9 +1,19 @@
 import { AlertTriangle, Phone, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function CrisisBanner() {
   const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    // Listen for chat open events
+    const handleChatOpen = () => setIsVisible(false);
+    window.addEventListener('chat-widget-opened', handleChatOpen);
+    
+    return () => {
+      window.removeEventListener('chat-widget-opened', handleChatOpen);
+    };
+  }, []);
 
   if (!isVisible) return null;
 

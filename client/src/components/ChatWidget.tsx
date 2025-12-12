@@ -22,6 +22,14 @@ export function ChatWidget() {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
+  // Dispatch event when opened
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      window.dispatchEvent(new Event('chat-widget-opened'));
+    }
+  };
+
   const handleSend = () => {
     if (!input.trim()) return;
     
@@ -39,7 +47,7 @@ export function ChatWidget() {
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button
           size="icon"
