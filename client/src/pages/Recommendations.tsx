@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import heroImg from "@assets/generated_images/cozy_reading_recommendation_hero.png";
-import { Search, BookOpen, Star, Sparkles, ExternalLink, Loader2 } from "lucide-react";
+import { Search, BookOpen, Star, Sparkles, ExternalLink, Loader2, FileText, Microscope } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -12,7 +12,7 @@ type Recommendation = {
   id: number;
   title: string;
   author: string;
-  type: "book" | "website";
+  type: "book" | "website" | "article" | "research";
   description: string;
   tags: string[];
   image: string;
@@ -109,6 +109,36 @@ const mockDatabase: Recommendation[] = [
     tags: ["Yoga", "Meditation", "Mindfulness"],
     image: "https://images.unsplash.com/photo-1599447421405-0c1a1571550c?auto=format&fit=crop&q=80&w=200&h=300",
     rating: 4.9
+  },
+  {
+    id: 10,
+    title: "Yoga for Anxiety and Depression",
+    author: "Harvard Health Publishing",
+    type: "article",
+    description: "A comprehensive look at how yoga modulation of stress response systems can help reduce anxiety and depression.",
+    tags: ["Health", "Science", "Yoga"],
+    image: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?auto=format&fit=crop&q=80&w=200&h=300",
+    rating: 4.8
+  },
+  {
+    id: 11,
+    title: "Effectiveness of Gita-based Intervention",
+    author: "Journal of Religion & Health",
+    type: "research",
+    description: "Clinical study on the impact of Bhagavad Gita teachings on stress levels in medical students.",
+    tags: ["Research", "Psychology", "Clinical Study"],
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=200&h=300",
+    rating: 4.7
+  },
+  {
+    id: 12,
+    title: "Mindfulness in Indian Scripture",
+    author: "Psychology Today",
+    type: "article",
+    description: "Exploring the roots of modern mindfulness practices in ancient Hindu and Buddhist texts.",
+    tags: ["History", "Mindfulness", "Culture"],
+    image: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&q=80&w=200&h=300",
+    rating: 4.6
   }
 ];
 
@@ -136,6 +166,19 @@ export default function Recommendations() {
     }, 1500);
   };
 
+  const getTypeIcon = (type: Recommendation["type"]) => {
+    switch (type) {
+      case "book": return <BookOpen className="w-4 h-4" />;
+      case "article": return <FileText className="w-4 h-4" />;
+      case "research": return <Microscope className="w-4 h-4" />;
+      default: return <ExternalLink className="w-4 h-4" />;
+    }
+  };
+
+  const getTypeLabel = (type: Recommendation["type"]) => {
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
   return (
     <PageTransition>
       <div className="relative overflow-hidden">
@@ -156,7 +199,7 @@ export default function Recommendations() {
               Mindful Recommendations
             </h1>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Discover books and resources curated to bring peace, clarity, and growth to your life.
+              Discover books, articles, and research curated to bring peace, clarity, and growth to your life.
             </p>
             
             <div className="max-w-xl mx-auto flex gap-2 relative">
@@ -164,7 +207,7 @@ export default function Recommendations() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="How are you feeling? (e.g., Anxious, Curious, Tired)"
+                placeholder="Search topics (e.g., Yoga, Gita, Stress)..."
                 className="h-14 pl-6 rounded-full shadow-lg text-lg bg-background/80 backdrop-blur-sm border-primary/20 focus-visible:ring-primary"
               />
               <Button 
@@ -183,7 +226,7 @@ export default function Recommendations() {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold font-serif">Curated For You</h2>
             <Badge variant="outline" className="px-3 py-1">
-              {results.length} Recommendations Found
+              {results.length} Resources Found
             </Badge>
           </div>
 
@@ -211,8 +254,8 @@ export default function Recommendations() {
                     <div className="absolute top-4 right-4 bg-background/90 backdrop-blur px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 shadow-sm">
                       <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /> {item.rating}
                     </div>
-                    <Badge className="absolute top-4 left-4 bg-primary/90 hover:bg-primary">
-                      {item.type === 'book' ? 'Book' : 'Resource'}
+                    <Badge className="absolute top-4 left-4 bg-primary/90 hover:bg-primary flex items-center gap-1">
+                      {getTypeIcon(item.type)} {getTypeLabel(item.type)}
                     </Badge>
                   </div>
                   
@@ -232,7 +275,7 @@ export default function Recommendations() {
                     </div>
 
                     <Button variant="outline" className="w-full rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                      {item.type === 'book' ? 'Read Summary' : 'Visit Website'} <ExternalLink className="ml-2 w-3 h-3" />
+                      Read {item.type === 'book' ? 'Summary' : 'Now'} <ExternalLink className="ml-2 w-3 h-3" />
                     </Button>
                   </div>
                 </motion.div>
