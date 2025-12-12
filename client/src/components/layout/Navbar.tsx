@@ -60,6 +60,12 @@ export function Navbar() {
               <DropdownMenuItem onClick={() => setLang("Hindi")}>Hindi</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLang("Tamil")}>Tamil</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLang("Bengali")}>Bengali</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Telugu")}>Telugu</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Marathi")}>Marathi</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Kannada")}>Kannada</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Malayalam")}>Malayalam</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Gujarati")}>Gujarati</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang("Punjabi")}>Punjabi</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

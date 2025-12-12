@@ -161,7 +161,7 @@ export default function Home() {
                   An integrated platform that combines clinical therapy with the healing power of yoga and mindfulness.
                 </p>
                 <ul className="space-y-4 relative z-10">
-                  {["Multi-Language Support (Hindi, Tamil, Bengali)", "Verified Indian Professionals", "Affordable & Flexible Payment Plans", "Holistic Care: Yoga + Therapy"].map((item, i) => (
+                  {["Multi-Language Support (Hindi, Tamil, Bengali, Telugu, Marathi & more)", "Verified Indian Professionals", "Affordable & Flexible Payment Plans", "Holistic Care: Yoga + Therapy"].map((item, i) => (
                     <motion.li 
                       key={i} 
                       initial={{ opacity: 0, x: 20 }}
