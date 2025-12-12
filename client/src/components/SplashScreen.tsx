@@ -56,8 +56,7 @@ export function SplashScreen() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
       {/* Animated Background Overlay */}
       <motion.div 
-        className="absolute inset-0 bg-background/90 backdrop-blur-md"
-        animate={{ backgroundColor: colors.bg }}
+        className="absolute inset-0 bg-background/95 backdrop-blur-md"
         transition={{ duration: 1.5 }}
       />
       
