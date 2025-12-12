@@ -1,14 +1,22 @@
 import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import heroBg from "@assets/generated_images/indian_wellness_hero.png";
 import { Heart, Sparkles, Shield, Flower, Users, IndianRupee } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+
+const HERO_VIDEOS = [
+  "https://videos.pexels.com/video-files/7211161/7211161-uhd_2560_1440_30fps.mp4", // Stream in nature
+  "https://videos.pexels.com/video-files/7687610/7687610-uhd_2560_1440_30fps.mp4", // Stream through rocks
+  "https://videos.pexels.com/video-files/7066617/7066617-uhd_2560_1440_30fps.mp4", // Timelapse of river
+  "https://videos.pexels.com/video-files/8379440/8379440-uhd_2560_1440_30fps.mp4", // Flowing river
+  "https://videos.pexels.com/video-files/7388473/7388473-uhd_2560_1440_30fps.mp4"  // Stream in woodland
+];
 
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
+  const [videoSrc, setVideoSrc] = useState("");
   
   // Parallax effects
   const heroY = useTransform(scrollY, [0, 500], [0, 200]);
@@ -16,6 +24,12 @@ export default function Home() {
   
   const textY = useTransform(scrollY, [0, 300], [0, 100]);
   const textOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+
+  useEffect(() => {
+    // Randomly select a video on mount
+    const randomVideo = HERO_VIDEOS[Math.floor(Math.random() * HERO_VIDEOS.length)];
+    setVideoSrc(randomVideo);
+  }, []);
 
   return (
     <PageTransition>
@@ -27,12 +41,17 @@ export default function Home() {
             style={{ y: heroY, opacity: heroOpacity }}
             className="absolute inset-0 z-0"
           >
-             <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/50 to-background z-10" />
-            <img 
-              src={heroBg} 
-              alt="Indian Wellness" 
-              className="w-full h-full object-cover"
-            />
+             <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background z-10" />
+            {videoSrc && (
+              <video 
+                src={videoSrc}
+                autoPlay 
+                muted 
+                loop 
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            )}
           </motion.div>
 
           {/* Content Layer - Moves faster (or normal speed) */}
