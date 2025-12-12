@@ -4,37 +4,49 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/ChatWidget";
 import { SplashScreen } from "@/components/SplashScreen";
+import { Loader2 } from "lucide-react";
 
-import Home from "@/pages/Home";
-import Services from "@/pages/Services";
-import Therapists from "@/pages/Therapists";
-import Recommendations from "@/pages/Recommendations";
-import About from "@/pages/About";
-import Profile from "@/pages/Profile";
-import FormulaGuide from "@/pages/FormulaGuide";
-import NotFound from "@/pages/not-found";
+// Lazy load pages for better performance
+const Home = lazy(() => import("@/pages/Home"));
+const Services = lazy(() => import("@/pages/Services"));
+const Therapists = lazy(() => import("@/pages/Therapists"));
+const Recommendations = lazy(() => import("@/pages/Recommendations"));
+const About = lazy(() => import("@/pages/About"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const FormulaGuide = lazy(() => import("@/pages/FormulaGuide"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function Router() {
   const [location] = useLocation();
 
   return (
     <AnimatePresence mode="wait">
-      <Switch location={location} key={location}>
-        <Route path="/" component={Home} />
-        <Route path="/services" component={Services} />
-        <Route path="/therapists" component={Therapists} />
-        <Route path="/recommendations" component={Recommendations} />
-        <Route path="/about" component={About} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/formula-guide" component={FormulaGuide} />
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<PageLoader />}>
+        <Switch location={location} key={location}>
+          <Route path="/" component={Home} />
+          <Route path="/services" component={Services} />
+          <Route path="/therapists" component={Therapists} />
+          <Route path="/recommendations" component={Recommendations} />
+          <Route path="/about" component={About} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/formula-guide" component={FormulaGuide} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </AnimatePresence>
   );
 }
