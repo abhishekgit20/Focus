@@ -32,9 +32,8 @@ const TRACK = {
 };
 
 // Actual URL for "Parvati Panchakam | Sounds of Isha | @LingaBhairavi"
-// I will use this one: https://www.youtube.com/watch?v=P_7qgWkXQyA (Hypothetical, I'll use a real one I find or a search).
-// Actually, let's use a reliable one.
-const PARVATI_PANCHAKAM_URL = "https://www.youtube.com/watch?v=K_7qgWkXQyA"; // This is a common ID for this track.
+// Updated to user provided playlist link
+const PARVATI_PANCHAKAM_URL = "https://www.youtube.com/watch?v=DnVK9mp68Zw&list=RDDnVK9mp68Zw&start_radio=1";
 
 export function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -50,7 +49,7 @@ export function BackgroundMusic() {
       <div style={{ position: 'fixed', bottom: 0, right: 0, width: '1px', height: '1px', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
         <ReactPlayer
           ref={playerRef as any}
-          url="https://www.youtube.com/watch?v=K_7qgWkXQyA" // Parvati Panchakam
+          url={PARVATI_PANCHAKAM_URL}
           playing={isPlaying}
           loop={true}
           volume={0.5}
