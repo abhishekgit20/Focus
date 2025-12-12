@@ -19,7 +19,6 @@ export function Navbar() {
     { href: "/", label: "Home" },
     { href: "/services", label: "Services" },
     { href: "/therapists", label: "Professionals" },
-    { href: "/chatbot", label: "Gita Bot" },
     { href: "/about", label: "About" },
   ];
 
