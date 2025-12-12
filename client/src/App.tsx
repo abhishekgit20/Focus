@@ -12,6 +12,11 @@ import { ChatWidget } from "@/components/ChatWidget";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Loader2 } from "lucide-react";
 
+// Images to preload
+import yogaImg from "@assets/generated_images/yoga_session_illustration.png";
+import therapyImg from "@assets/generated_images/therapy_session_illustration.png";
+import chatImg from "@assets/generated_images/wisdom_chatbot_avatar.png";
+
 // Lazy load pages for better performance
 const Home = lazy(() => import("@/pages/Home"));
 const Services = lazy(() => import("@/pages/Services"));
@@ -55,6 +60,14 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Preload critical images for Services page
+    const imagesToPreload = [yogaImg, therapyImg, chatImg];
+    
+    imagesToPreload.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+
     // Simulate initial loading for the "OM" splash screen
     const timer = setTimeout(() => {
       setIsLoading(false);
