@@ -9,18 +9,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
-import { Send, User, Sparkles, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { Send, User, Sparkles, MessageCircle, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { generateAIResponse } from "@/lib/gitaData";
+
+interface Message {
+  role: string;
+  text: string;
+  sanskrit?: string;
+  purport?: string;
+  source?: string;
+}
 
 export function ChatWidget() {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     { 
       role: "bot", 
-      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita and ancient mindfulness practices. What is troubling your mind today?" 
+      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita and ancient mindfulness practices. What is troubling your mind today?",
+      source: "Gita Bot"
     }
   ]);
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
 
   // Dispatch event when opened
   const handleOpenChange = (open: boolean) => {
@@ -36,14 +55,23 @@ export function ChatWidget() {
     const newMessages = [...messages, { role: "user", text: input }];
     setMessages(newMessages);
     setInput("");
+    setIsTyping(true);
 
-    // Simulate bot response with Gita wisdom
+    // Simulate bot response with Gita wisdom using shared logic
+    const thinkingTime = Math.random() * 1000 + 1500; // 1.5s - 2.5s
+
     setTimeout(() => {
-      setMessages([...newMessages, { 
+      const response = generateAIResponse(input);
+      
+      setMessages(prev => [...prev, { 
         role: "bot", 
-        text: "In the Bhagavad Gita, Krishna says: 'You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions.' Focus on the present moment and your efforts, rather than worrying about the outcome. This will bring you peace." 
+        text: response.text,
+        sanskrit: response.sanskrit,
+        purport: response.purport,
+        source: response.source
       }]);
-    }, 2000);
+      setIsTyping(false);
+    }, thinkingTime);
   };
 
   return (
@@ -77,7 +105,7 @@ export function ChatWidget() {
         </SheetHeader>
 
         <ScrollArea className="flex-grow p-4 bg-slate-50/50">
-          <div className="space-y-4">
+          <div className="space-y-4" ref={scrollRef}>
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'bot' && (
@@ -87,15 +115,40 @@ export function ChatWidget() {
                 )}
                 
                 <div className={`
-                  max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed shadow-sm
+                  max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed shadow-sm flex flex-col gap-2
                   ${msg.role === 'user' 
                     ? 'bg-primary text-primary-foreground rounded-tr-none' 
                     : 'bg-white border rounded-tl-none text-foreground'}
                 `}>
-                  {msg.text}
+                  {msg.sanskrit && (
+                    <p className="font-serif text-primary/80 italic text-xs border-l-2 border-primary/20 pl-2">
+                      {msg.sanskrit}
+                    </p>
+                  )}
+                  <p>{msg.text}</p>
+                  {msg.purport && (
+                    <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                      <strong>Insight:</strong> {msg.purport}
+                    </p>
+                  )}
+                  {msg.source && (
+                    <p className="text-[10px] text-muted-foreground text-right italic">- {msg.source}</p>
+                  )}
                 </div>
               </div>
             ))}
+            {isTyping && (
+              <div className="flex gap-3 justify-start">
+                 <div className="w-6 h-6 rounded-full bg-white border overflow-hidden shrink-0 mt-1">
+                    <img src={botAvatar} alt="Bot" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="bg-white border rounded-2xl rounded-tl-none p-3 shadow-sm flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 

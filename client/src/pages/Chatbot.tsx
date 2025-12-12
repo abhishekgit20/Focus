@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
 import { Send, User, Sparkles, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { GITA_VERSES, FALLBACK_QUOTES } from "@/lib/gitaData";
+import { GITA_VERSES, FALLBACK_QUOTES, generateAIResponse } from "@/lib/gitaData";
 
 interface Message {
   role: string;
@@ -13,13 +13,14 @@ interface Message {
   sanskrit?: string;
   purport?: string;
   source?: string;
+  isThinking?: boolean;
 }
 
 export default function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: "bot", 
-      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, or grief?",
+      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind.",
       source: "Gita Bot"
     }
   ]);
@@ -31,20 +32,7 @@ export default function Chatbot() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
-
-  const findGitaWisdom = (text: string) => {
-    const lowerText = text.toLowerCase();
-    
-    // Check keywords
-    if (lowerText.includes("stress") || lowerText.includes("anx") || lowerText.includes("worry")) return GITA_VERSES["stress"][Math.floor(Math.random() * GITA_VERSES["stress"].length)];
-    if (lowerText.includes("ang") || lowerText.includes("rage") || lowerText.includes("mad")) return GITA_VERSES["anger"][0];
-    if (lowerText.includes("confus") || lowerText.includes("lost") || lowerText.includes("decid")) return GITA_VERSES["confusion"][0];
-    if (lowerText.includes("grief") || lowerText.includes("sad") || lowerText.includes("cry") || lowerText.includes("loss")) return GITA_VERSES["grief"][0];
-    if (lowerText.includes("focus") || lowerText.includes("mind") || lowerText.includes("distract")) return GITA_VERSES["focus"][0];
-    
-    return null;
-  };
+  }, [messages, isTyping]); // Scroll when typing starts too
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -54,43 +42,24 @@ export default function Chatbot() {
     setInput("");
     setIsTyping(true);
 
-    // Analyze text for keywords
-    const wisdom = findGitaWisdom(input);
+    // Simulate AI "thinking" process with variable delay
+    const thinkingTime = Math.random() * 1000 + 1500; // 1.5s - 2.5s
     
     setTimeout(async () => {
-      let botResponse;
-
-      if (wisdom) {
-        botResponse = {
-          role: "bot",
-          text: wisdom.translation,
-          sanskrit: wisdom.text,
-          purport: wisdom.purport,
-          source: `Bhagavad Gita ${wisdom.chapter}.${wisdom.verse}`
-        };
-      } else {
-        // Fallback to external API or random quote
-        try {
-          const res = await fetch('https://dummyjson.com/quotes/random');
-          const data = await res.json();
-          botResponse = {
-            role: "bot",
-            text: data.quote,
-            source: data.author
-          };
-        } catch (e) {
-          const randomQuote = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
-          botResponse = {
-            role: "bot",
-            text: randomQuote,
-            source: "Ancient Wisdom"
-          };
-        }
-      }
+      // Use shared logic to find wisdom
+      const response = generateAIResponse(input);
+      
+      const botResponse = {
+        role: "bot",
+        text: response.text,
+        sanskrit: response.sanskrit,
+        purport: response.purport,
+        source: response.source
+      };
 
       setMessages(prev => [...prev, botResponse]);
       setIsTyping(false);
-    }, 1500);
+    }, thinkingTime);
   };
 
   return (
