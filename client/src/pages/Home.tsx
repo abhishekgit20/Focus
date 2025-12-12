@@ -19,12 +19,40 @@ const HERO_VIDEOS = [
 
 const HERO_IMAGES = [heroBg1, heroBg2, heroBg3];
 
+const DAILY_VERSES = [
+  {
+    text: "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions.",
+    source: "Bhagavad Gita, Chapter 2, Verse 47"
+  },
+  {
+    text: "Lift yourself by yourself, do not demean yourself; for the self is the friend of the self, and the self is the enemy of the self.",
+    source: "Bhagavad Gita, Chapter 6, Verse 5"
+  },
+  {
+    text: "For him who has conquered the mind, the mind is the best of friends; but for one who has failed to do so, his very mind will be the greatest enemy.",
+    source: "Bhagavad Gita, Chapter 6, Verse 6"
+  },
+  {
+    text: "There is no possibility of one's becoming a yogi, O Arjuna, if one eats too much or eats too little, sleeps too much or does not sleep enough.",
+    source: "Bhagavad Gita, Chapter 6, Verse 16"
+  },
+  {
+    text: "From anger, delusion arises, and from delusion, bewilderment of memory. When memory is bewildered, intelligence is lost, and when intelligence is lost, one falls down again into the material pool.",
+    source: "Bhagavad Gita, Chapter 2, Verse 63"
+  },
+  {
+    text: "The peace of God is with them whose mind and soul are in harmony, who are free from desire and wrath, who know their own soul.",
+    source: "Bhagavad Gita, Chapter 5, Verse 26"
+  }
+];
+
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
   const [videoSrc, setVideoSrc] = useState("");
   const [imageSrc, setImageSrc] = useState(heroBg1);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [todaysVerse, setTodaysVerse] = useState(DAILY_VERSES[0]);
   
   // Parallax effects
   const heroY = useTransform(scrollY, [0, 500], [0, 200]);
@@ -40,6 +68,10 @@ export default function Home() {
 
     const randomImageIndex = Math.floor(Math.random() * HERO_IMAGES.length);
     setImageSrc(HERO_IMAGES[randomImageIndex]);
+
+    // Random verse
+    const randomVerseIndex = Math.floor(Math.random() * DAILY_VERSES.length);
+    setTodaysVerse(DAILY_VERSES[randomVerseIndex]);
   }, []);
 
   return (
@@ -189,9 +221,9 @@ export default function Home() {
               <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">Daily Wisdom</span>
               <h2 className="text-3xl font-serif font-bold mb-8">Verse of the Day</h2>
               <blockquote className="text-2xl md:text-3xl font-serif italic text-muted-foreground leading-relaxed mb-6">
-                "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions."
+                "{todaysVerse.text}"
               </blockquote>
-              <cite className="text-lg font-medium text-primary not-italic block mb-8">— Bhagavad Gita, Chapter 2, Verse 47</cite>
+              <cite className="text-lg font-medium text-primary not-italic block mb-8">— {todaysVerse.source}</cite>
               <Button variant="outline" className="rounded-full">Read More Verses</Button>
             </div>
           </div>
