@@ -86,25 +86,25 @@ export default function Home() {
             className="container mx-auto px-4 relative z-20 text-center"
           >
             <div className="max-w-4xl mx-auto">
-              <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 backdrop-blur-sm">
+              <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white text-sm font-medium mb-6 backdrop-blur-md border border-white/30">
                 Integrated Mental Health for India
               </span>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-foreground/90 drop-shadow-sm">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-lg">
                 Ancient Wisdom Meets <br />
                 <span className="text-primary italic">Modern Care</span>
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground/90 mb-10 max-w-2xl mx-auto font-medium">
+              <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
                 Connect with verified psychiatrists, therapists, and yoga gurus. 
                 Experience holistic healing with our Bhagavad Gita-inspired AI guide.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/therapists">
-                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all">
+                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all border-none">
                     Find Professionals
                   </Button>
                 </Link>
                 <Link href="/chatbot">
-                  <Button size="lg" variant="outline" className="rounded-full text-lg px-8 py-6 border-2 bg-background/50 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground transition-all">
+                  <Button size="lg" variant="outline" className="rounded-full text-lg px-8 py-6 border-2 bg-white/10 text-white border-white/30 backdrop-blur-md hover:bg-white/20 hover:text-white hover:border-white transition-all">
                     Chat with Gita Bot
                   </Button>
                 </Link>

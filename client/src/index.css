@@ -12,44 +12,45 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 
-  /* Pastel Color Palette */
-  /* Blue: #90CAF9 -> H: 207, S: 90%, L: 77% */
-  /* Green: #A5D6A7 -> H: 122, S: 39%, L: 75% */
-  /* BG: #FAFAF5 -> H: 60, S: 25%, L: 97% */
+  /* Vedic/Saffron Color Palette */
+  /* Saffron: #FF9933 -> H: 30, S: 100%, L: 60% */
+  /* Green: #138808 -> H: 115, S: 90%, L: 28% */
+  /* Navy: #000080 -> H: 240, S: 100%, L: 25% */
+  /* BG: #FFFAF0 -> H: 40, S: 50%, L: 97% (Floral White) */
   
-  --color-background: hsl(60 25% 97%);
-  --color-foreground: hsl(210 10% 25%);
+  --color-background: hsl(40 50% 97%);
+  --color-foreground: hsl(210 10% 20%);
 
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(210 10% 25%);
+  --color-card-foreground: hsl(210 10% 20%);
 
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(210 10% 25%);
+  --color-popover-foreground: hsl(210 10% 20%);
 
-  --color-primary: hsl(207 90% 77%); /* #90CAF9 */
-  --color-primary-foreground: hsl(210 20% 20%);
+  --color-primary: hsl(30 100% 60%); /* Saffron Orange */
+  --color-primary-foreground: hsl(0 0% 100%);
 
-  --color-secondary: hsl(122 39% 75%); /* #A5D6A7 */
-  --color-secondary-foreground: hsl(120 20% 20%);
+  --color-secondary: hsl(150 40% 90%); /* Soft Green */
+  --color-secondary-foreground: hsl(150 50% 20%);
 
-  --color-muted: hsl(210 20% 96%);
-  --color-muted-foreground: hsl(210 10% 50%);
+  --color-muted: hsl(30 20% 96%);
+  --color-muted-foreground: hsl(30 10% 40%);
 
-  --color-accent: hsl(60 30% 94%);
-  --color-accent-foreground: hsl(210 10% 25%);
+  --color-accent: hsl(30 30% 94%);
+  --color-accent-foreground: hsl(210 10% 20%);
 
-  --color-destructive: hsl(0 84% 90%);
-  --color-destructive-foreground: hsl(0 80% 30%);
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(0 0% 98%);
 
-  --color-border: hsl(210 10% 90%);
-  --color-input: hsl(210 10% 90%);
-  --color-ring: hsl(207 90% 77%);
+  --color-border: hsl(30 10% 85%);
+  --color-input: hsl(30 10% 85%);
+  --color-ring: hsl(30 100% 60%);
 
-  --color-chart-1: hsl(207 90% 77%);
-  --color-chart-2: hsl(122 39% 75%);
-  --color-chart-3: hsl(45 90% 80%);
-  --color-chart-4: hsl(340 70% 85%);
-  --color-chart-5: hsl(270 60% 85%);
+  --color-chart-1: hsl(30 100% 60%);
+  --color-chart-2: hsl(150 40% 60%);
+  --color-chart-3: hsl(45 90% 60%);
+  --color-chart-4: hsl(340 70% 70%);
+  --color-chart-5: hsl(270 60% 70%);
 
   --radius: 0.75rem;
 
