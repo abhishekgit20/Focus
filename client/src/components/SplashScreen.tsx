@@ -13,26 +13,48 @@ export function SplashScreen() {
             viewBox="0 0 100 100"
             className="absolute inset-0 w-full h-full text-primary/20"
             animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
           >
-            {/* Simple geometric mandala pattern */}
+            {/* Outer Ring */}
             <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="0.5" />
             <path d="M50 2 A48 48 0 0 1 50 98 A48 48 0 0 1 50 2 Z" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="4 4" />
+            
+            {/* Radiating Lines */}
             {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
               <motion.path
                 key={deg}
-                d="M50 50 L50 10"
+                d="M50 50 L50 18"
                 stroke="currentColor"
                 strokeWidth="0.5"
                 transform={`rotate(${deg} 50 50)`}
               />
             ))}
-            {[0, 60, 120, 180, 240, 300].map((deg) => (
+
+            {/* Swasti Symbols (卐) placed at cardinal points */}
+            {[0, 90, 180, 270].map((deg) => (
+              <g key={deg} transform={`rotate(${deg} 50 50)`}>
+                {/* Using a text element for the symbol to ensure correct shape */}
+                <text 
+                  x="50" 
+                  y="12" 
+                  fontSize="10" 
+                  fill="currentColor" 
+                  textAnchor="middle" 
+                  dominantBaseline="middle"
+                  style={{ opacity: 0.8 }}
+                >
+                  卐
+                </text>
+              </g>
+            ))}
+
+            {/* Small decorative circles */}
+            {[45, 135, 225, 315].map((deg) => (
               <circle
                 key={deg}
                 cx="50"
                 cy="25"
-                r="10"
+                r="3"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="0.5"
