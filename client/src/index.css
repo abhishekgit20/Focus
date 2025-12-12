@@ -52,6 +52,11 @@
   --color-chart-5: hsl(270 60% 85%);
 
   --radius: 0.75rem;
+
+  @keyframes music-bar {
+    0%, 100% { height: 4px; opacity: 0.5; }
+    50% { height: 12px; opacity: 1; }
+  }
 }
 
 @layer base {
@@ -63,5 +68,11 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif;
+  }
+}
+
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

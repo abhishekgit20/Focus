@@ -10,6 +10,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/ChatWidget";
 import { SplashScreen } from "@/components/SplashScreen";
+import { BackgroundMusic } from "@/components/BackgroundMusic";
 
 import Home from "@/pages/Home";
 import Services from "@/pages/Services";
@@ -60,6 +61,7 @@ function App() {
               </main>
               <Footer />
               <ChatWidget />
+              <BackgroundMusic />
             </div>
           )}
         </AnimatePresence>
