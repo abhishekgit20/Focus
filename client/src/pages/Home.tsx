@@ -62,7 +62,7 @@ export default function Home() {
               loading="eager"
             />
 
-            {/* Video Layer - Fades in over the image */}
+            {/* Video Layer - Fades in over the image after a delay */}
             {videoSrc && (
               <video 
                 src={videoSrc}
@@ -71,8 +71,11 @@ export default function Home() {
                 loop 
                 playsInline
                 preload="auto"
-                onCanPlay={() => setIsVideoLoaded(true)}
-                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ease-in-out ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onCanPlay={() => {
+                  // Keep the image visible for 5 seconds before fading in the video
+                  setTimeout(() => setIsVideoLoaded(true), 5000);
+                }}
+                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-[2000ms] ease-in-out ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
           </motion.div>
