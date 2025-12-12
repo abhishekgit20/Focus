@@ -53,22 +53,22 @@ export default function Login() {
             </Button>
           </Link>
 
-          <div className="w-full max-w-md space-y-8">
-            <div className="text-left">
-              <h1 className="text-4xl font-serif font-bold text-primary mb-2">Welcome Back</h1>
-              <p className="text-muted-foreground">Sign in to continue your journey to wellness.</p>
+          <div className="w-full max-w-[420px] space-y-8">
+            <div className="text-left space-y-2">
+              <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground tracking-tight">Welcome Back</h1>
+              <p className="text-base text-muted-foreground">Sign in to continue your journey to wellness.</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="email" className="text-sm font-medium text-foreground/80">Email Address</Label>
+                <div className="relative group">
+                  <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
                   <Input 
                     id="email" 
                     type="email" 
                     placeholder="you@example.com" 
-                    className="pl-10 rounded-xl bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary"
+                    className="pl-11 h-12 rounded-xl bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/30 focus-visible:border-primary text-base transition-all"
                     required
                   />
                 </div>
@@ -76,40 +76,40 @@ export default function Login() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-sm font-medium text-primary hover:underline">Forgot password?</a>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground/80">Password</Label>
+                  <a href="#" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">Forgot password?</a>
                 </div>
-                <div className="relative">
+                <div className="relative group">
                   <Input 
                     id="password" 
                     type={showPassword ? "text" : "password"} 
                     placeholder="••••••••" 
-                    className="pl-3 pr-10 rounded-xl bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary"
+                    className="pl-4 pr-11 h-12 rounded-xl bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/30 focus-visible:border-primary text-base transition-all"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3.5 top-3.5 text-muted-foreground/60 hover:text-foreground transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox id="remember" />
-                <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground">Remember me for 30 days</Label>
+              <div className="flex items-center space-x-3">
+                <Checkbox id="remember" className="border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                <Label htmlFor="remember" className="text-sm text-muted-foreground font-normal cursor-pointer select-none">Remember me for 30 days</Label>
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full h-12 text-lg rounded-full bg-primary hover:bg-primary/90 shadow-lg hover:shadow-primary/20 transition-all"
+                className="w-full h-12 text-base font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-lg hover:shadow-primary/25 transition-all duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Logging in...
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Logging in...
                   </>
                 ) : (
                   "Sign In"
@@ -117,27 +117,27 @@ export default function Login() {
               </Button>
             </form>
 
-            <div className="relative">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-muted" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                <span className="bg-background px-4 text-muted-foreground font-medium">Or continue with</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="h-11 rounded-xl border-muted hover:bg-muted/30 gap-2">
-                <Chrome className="w-4 h-4" /> Google
+              <Button variant="outline" className="h-12 rounded-xl border-muted-foreground/20 hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/40 transition-all gap-2 text-base font-medium text-muted-foreground">
+                <Chrome className="w-5 h-5" /> Google
               </Button>
-              <Button variant="outline" className="h-11 rounded-xl border-muted hover:bg-muted/30 gap-2">
-                <Facebook className="w-4 h-4 text-blue-600" /> Facebook
+              <Button variant="outline" className="h-12 rounded-xl border-muted-foreground/20 hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/40 transition-all gap-2 text-base font-medium text-muted-foreground">
+                <Facebook className="w-5 h-5 text-blue-600" /> Facebook
               </Button>
             </div>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground mt-6">
               Don't have an account?{" "}
-              <a href="#" className="font-semibold text-primary hover:underline">Sign up for free</a>
+              <a href="#" className="font-semibold text-primary hover:text-primary/80 transition-colors hover:underline underline-offset-4">Sign up for free</a>
             </p>
           </div>
         </div>
