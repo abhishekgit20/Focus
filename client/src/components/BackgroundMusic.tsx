@@ -13,10 +13,24 @@ export function BackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Using a direct MP3 link from Archive.org
-    audioRef.current = new Audio("https://archive.org/download/bamboo-flute-music-peace-calm-soft/Bamboo%20Flute%20-%20Meditation%20Music.mp3");
-    audioRef.current.loop = true;
-    audioRef.current.volume = 0.5; // Start at 50% volume
+    // Using a more reliable direct MP3 link from Archive.org (Shakuhachi bamboo flute)
+    const audio = new Audio("https://archive.org/download/bamboo-flute-music-for-relaxing-meditation-and-healing/Shakuhachi.mp3");
+    audio.loop = true;
+    audio.volume = 0.5;
+    audio.crossOrigin = "anonymous";
+    
+    // Add event listeners for debugging
+    audio.addEventListener('error', (e) => {
+      console.error("Audio error:", e);
+      // Fallback to another source if first one fails
+      if (audio.src.includes("Shakuhachi")) {
+        console.log("Switching to fallback audio source...");
+        audio.src = "https://archive.org/download/bamboo-flute-music-peace-calm-soft/Bamboo%20Flute%20-%20Relaxing%20Music.mp3";
+        if (isPlaying) audio.play().catch(console.error);
+      }
+    });
+
+    audioRef.current = audio;
 
     return () => {
       if (audioRef.current) {
