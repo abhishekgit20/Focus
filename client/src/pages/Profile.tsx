@@ -174,26 +174,26 @@ export default function Profile() {
                       <CardTitle className="text-base">Today's Check-in</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex justify-between items-center gap-3">
-                        <button className="group flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-transparent hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer">
-                          <div className="p-2.5 rounded-full bg-red-100 text-red-500 group-hover:scale-110 transition-transform shadow-sm">
-                            <Frown className="w-6 h-6" />
+                      <div className="flex justify-between items-center gap-2">
+                        <button className="group flex-1 flex flex-col items-center gap-1.5 p-2 rounded-xl border border-transparent hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer">
+                          <div className="p-2 rounded-full bg-red-100 text-red-500 group-hover:scale-110 transition-transform shadow-sm">
+                            <Frown className="w-5 h-5" />
                           </div>
-                          <span className="text-xs font-semibold text-muted-foreground group-hover:text-red-600">Stressed</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover:text-red-600 tracking-wide">Stressed</span>
                         </button>
 
-                        <button className="group flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-transparent hover:border-yellow-200 hover:bg-yellow-50 transition-all cursor-pointer">
-                          <div className="p-2.5 rounded-full bg-yellow-100 text-yellow-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <Meh className="w-6 h-6" />
+                        <button className="group flex-1 flex flex-col items-center gap-1.5 p-2 rounded-xl border border-transparent hover:border-yellow-200 hover:bg-yellow-50 transition-all cursor-pointer">
+                          <div className="p-2 rounded-full bg-yellow-100 text-yellow-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <Meh className="w-5 h-5" />
                           </div>
-                          <span className="text-xs font-semibold text-muted-foreground group-hover:text-yellow-700">Okay</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground group-hover:text-yellow-700 tracking-wide">Okay</span>
                         </button>
 
-                        <button className="group flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-green-200 bg-green-50 transition-all shadow-sm cursor-pointer">
-                          <div className="p-2.5 rounded-full bg-green-100 text-green-600 scale-110 shadow-sm">
-                            <Smile className="w-6 h-6" />
+                        <button className="group flex-1 flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 border-green-200 bg-green-50 transition-all shadow-sm cursor-pointer">
+                          <div className="p-2 rounded-full bg-green-100 text-green-600 scale-105 shadow-sm">
+                            <Smile className="w-5 h-5" />
                           </div>
-                          <span className="text-xs font-bold text-green-700">Great</span>
+                          <span className="text-[10px] uppercase font-bold text-green-700 tracking-wide">Great</span>
                         </button>
                       </div>
                     </CardContent>
