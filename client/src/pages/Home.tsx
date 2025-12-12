@@ -4,9 +4,10 @@ import { Link } from "wouter";
 import heroBg1 from "@assets/generated_images/indian_wellness_scene_with_yoga_guru,_therapist_and_clients.png";
 import heroBg2 from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
 import heroBg3 from "@assets/generated_images/psychologist_counseling_client_with_yoga_background.png";
-import { Heart, Sparkles, Shield, Flower, Users, IndianRupee } from "lucide-react";
+import { Heart, Sparkles, Shield, Flower, Users, IndianRupee, Quote, MessageCircle } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
+import { CrisisBanner } from "@/components/CrisisBanner";
 
 const HERO_VIDEOS = [
   "https://videos.pexels.com/video-files/7211161/7211161-uhd_2560_1440_30fps.mp4", // Stream in nature
@@ -44,6 +45,8 @@ export default function Home() {
   return (
     <PageTransition>
       <div ref={containerRef} className="relative overflow-hidden">
+        <CrisisBanner />
+        
         {/* Parallax Hero Section */}
         <section className="relative h-[90vh] flex items-center justify-center overflow-hidden bg-slate-900">
           {/* Background Layer - Moves slower */}
@@ -175,6 +178,70 @@ export default function Home() {
                   ))}
                 </ul>
               </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* Daily Wisdom Section */}
+        <section className="py-20 bg-primary/5 border-y border-primary/10">
+          <div className="container mx-auto px-4 text-center">
+            <div className="max-w-3xl mx-auto">
+              <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">Daily Wisdom</span>
+              <h2 className="text-3xl font-serif font-bold mb-8">Verse of the Day</h2>
+              <blockquote className="text-2xl md:text-3xl font-serif italic text-muted-foreground leading-relaxed mb-6">
+                "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions."
+              </blockquote>
+              <cite className="text-lg font-medium text-primary not-italic block mb-8">— Bhagavad Gita, Chapter 2, Verse 47</cite>
+              <Button variant="outline" className="rounded-full">Read More Verses</Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="py-24 bg-background relative z-30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 font-serif">Stories of Hope</h2>
+              <p className="text-muted-foreground text-lg">Real people, real recovery.</p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  quote: "I was hesitant to seek help, but Focus made it so easy to find a therapist who understood my cultural background.",
+                  author: "Priya S.",
+                  loc: "Mumbai",
+                  role: "Software Engineer"
+                },
+                {
+                  quote: "The combination of Yoga and therapy changed my life. I finally feel at peace with myself.",
+                  author: "Rahul M.",
+                  loc: "Bangalore",
+                  role: "Student"
+                },
+                {
+                  quote: "Being from a small town, I never thought I could access top psychiatrists. Focus made it possible.",
+                  author: "Anita K.",
+                  loc: "Indore",
+                  role: "Teacher"
+                }
+              ].map((testimonial, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.1 }}
+                  viewport={{ once: true }}
+                  className="bg-muted/30 p-8 rounded-3xl border relative"
+                >
+                  <Quote className="w-10 h-10 text-primary/20 absolute top-6 left-6" />
+                  <p className="text-lg mb-6 relative z-10 pt-4 text-muted-foreground italic">"{testimonial.quote}"</p>
+                  <div>
+                    <h4 className="font-bold">{testimonial.author}</h4>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}, {testimonial.loc}</p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
