@@ -42,7 +42,7 @@ export default function Services() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-primary font-bold tracking-wider text-sm uppercase mb-2 block">Our Offerings</span>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-primary-foreground font-serif">Holistic Services</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-foreground font-serif">Holistic Services</h1>
           <p className="text-lg text-muted-foreground">
             From clinical expertise to spiritual wellness, we provide a complete ecosystem for your mental health.
           </p>
