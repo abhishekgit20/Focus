@@ -69,6 +69,18 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Link href="/profile">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+                <img 
+                  src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60" 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </Button>
+          </Link>
+
           <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
             Get Started
           </Button>

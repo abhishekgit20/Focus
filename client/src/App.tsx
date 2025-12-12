@@ -16,6 +16,7 @@ import Services from "@/pages/Services";
 import Therapists from "@/pages/Therapists";
 import Recommendations from "@/pages/Recommendations";
 import About from "@/pages/About";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
         <Route path="/therapists" component={Therapists} />
         <Route path="/recommendations" component={Recommendations} />
         <Route path="/about" component={About} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>
