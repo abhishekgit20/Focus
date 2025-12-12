@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Calendar, Filter, IndianRupee } from "lucide-react";
 import { useState } from "react";
+import { FilterPanel } from "@/components/FilterPanel";
 
 // Mock Data - Indian Context
 const professionals = [
@@ -107,9 +108,7 @@ export default function Therapists() {
             >
               Yoga Gurus
             </Button>
-            <Button variant="ghost" size="icon">
-              <Filter className="w-4 h-4" />
-            </Button>
+            <FilterPanel />
           </div>
         </div>
 
