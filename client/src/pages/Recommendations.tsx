@@ -79,6 +79,36 @@ const mockDatabase: Recommendation[] = [
     tags: ["Philosophy", "Psychology", "Classic"],
     image: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200&h=300",
     rating: 4.9
+  },
+  {
+    id: 7,
+    title: "The Bhagavad Gita",
+    author: "Vyasa",
+    type: "book",
+    description: "The timeless spiritual classic on duty, action, and devotion. A dialogue between Prince Arjuna and Lord Krishna offering guidance on how to live a spiritual life.",
+    tags: ["Spirituality", "Hinduism", "Wisdom", "Stress Relief"],
+    image: "https://images.unsplash.com/photo-1602133185181-4b9535d7c329?auto=format&fit=crop&q=80&w=200&h=300",
+    rating: 5.0
+  },
+  {
+    id: 8,
+    title: "The Upanishads",
+    author: "Various Sages",
+    type: "book",
+    description: "Ancient texts that explore the nature of reality, the self (Atman), and the universal spirit (Brahman). Essential for deep spiritual inquiry.",
+    tags: ["Philosophy", "Ancient Wisdom", "Meditation"],
+    image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&q=80&w=200&h=300",
+    rating: 4.9
+  },
+  {
+    id: 9,
+    title: "The Yoga Sutras of Patanjali",
+    author: "Patanjali",
+    type: "book",
+    description: "The foundational text of Yoga philosophy, providing a practical guide to mastering the mind and achieving inner peace.",
+    tags: ["Yoga", "Meditation", "Mindfulness"],
+    image: "https://images.unsplash.com/photo-1599447421405-0c1a1571550c?auto=format&fit=crop&q=80&w=200&h=300",
+    rating: 4.9
   }
 ];
 
