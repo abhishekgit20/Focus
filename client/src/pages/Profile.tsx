@@ -91,38 +91,38 @@ export default function Profile() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm overflow-hidden">
-                <CardContent className="p-6 flex items-center gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm overflow-hidden h-full">
+                <CardContent className="p-4 md:p-6 flex items-center gap-4 h-full">
                   <div className="p-3 bg-white rounded-full text-blue-500 shadow-sm shrink-0">
                     <TrendingUp className="w-6 h-6" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-blue-600 font-medium truncate">Current Streak</p>
-                    <h3 className="text-2xl font-bold text-blue-900 truncate">5 Days</h3>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-blue-600 font-medium">Current Streak</p>
+                    <h3 className="text-xl md:text-2xl font-bold text-blue-900 break-words">5 Days</h3>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm overflow-hidden">
-                <CardContent className="p-6 flex items-center gap-4">
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm overflow-hidden h-full">
+                <CardContent className="p-4 md:p-6 flex items-center gap-4 h-full">
                   <div className="p-3 bg-white rounded-full text-purple-500 shadow-sm shrink-0">
                     <Award className="w-6 h-6" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-purple-600 font-medium truncate">Total Badges</p>
-                    <h3 className="text-2xl font-bold text-purple-900 truncate">8 Earned</h3>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-purple-600 font-medium">Total Badges</p>
+                    <h3 className="text-xl md:text-2xl font-bold text-purple-900 break-words">8 Earned</h3>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm overflow-hidden">
-                <CardContent className="p-6 flex items-center gap-4">
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm overflow-hidden h-full">
+                <CardContent className="p-4 md:p-6 flex items-center gap-4 h-full">
                   <div className="p-3 bg-white rounded-full text-green-500 shadow-sm shrink-0">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-green-600 font-medium truncate">Total Practice</p>
-                    <h3 className="text-2xl font-bold text-green-900 truncate">12.5 Hrs</h3>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-green-600 font-medium">Total Practice</p>
+                    <h3 className="text-xl md:text-2xl font-bold text-green-900 break-words">12.5 Hrs</h3>
                   </div>
                 </CardContent>
               </Card>
