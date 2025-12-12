@@ -235,16 +235,24 @@ export function BackgroundMusic() {
     <>
       {/* Hidden React Player for Custom Tracks */}
       {isCustomTrack && (
-        <div className="hidden">
+        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', visibility: 'hidden' }}>
           <ReactPlayer
-            ref={playerRef}
+            ref={playerRef as any}
             url={currentTrack.src}
             playing={isPlaying}
             loop={true}
             volume={volume[0]}
-            width="0"
-            height="0"
+            width="100%"
+            height="100%"
             onError={(e: any) => console.error("ReactPlayer Error:", e)}
+            onReady={() => console.log("ReactPlayer Ready")}
+            onStart={() => console.log("ReactPlayer Started")}
+            onPlay={() => console.log("ReactPlayer Playing")}
+            config={{
+              youtube: {
+                playerVars: { showinfo: 0, controls: 0, disablekb: 1 }
+              }
+            }}
           />
         </div>
       )}
