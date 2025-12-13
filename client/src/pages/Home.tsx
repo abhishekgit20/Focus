@@ -268,11 +268,11 @@ export default function Home() {
                   viewport={{ once: true, margin: "-50px" }}
                   className="bg-muted/30 p-8 rounded-3xl border relative flex flex-col h-full"
                 >
-                  <Quote className="w-10 h-10 text-primary/30 mb-4" />
-                  <p className="text-lg mb-6 text-muted-foreground italic relative z-10 flex-grow">"{testimonial.quote}"</p>
+                  <Quote className="w-10 h-10 text-primary/40 mb-4" />
+                  <p className="text-lg mb-6 text-foreground font-medium italic relative z-10 flex-grow leading-relaxed">"{testimonial.quote}"</p>
                   <div>
-                    <h4 className="font-bold">{testimonial.author}</h4>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}, {testimonial.loc}</p>
+                    <h4 className="font-bold text-foreground">{testimonial.author}</h4>
+                    <p className="text-sm text-muted-foreground font-medium">{testimonial.role}, {testimonial.loc}</p>
                   </div>
                 </motion.div>
               ))}
