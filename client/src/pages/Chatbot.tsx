@@ -20,6 +20,36 @@ interface ConversationMessage {
   content: string;
 }
 
+const CRISIS_KEYWORDS = [
+  'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die', 
+  'self harm', 'self-harm', 'hurt myself', 'cutting myself',
+  'no reason to live', 'better off dead', 'death wish', 'ending it all',
+  'आत्महत्या', 'मरना चाहता', 'मरना चाहती', 'जीना नहीं चाहता', 'खुद को मारना'
+];
+
+const CRISIS_RESPONSE = {
+  text: `🚨 I'm very concerned about what you've shared. Your life matters, and help is available right now.
+
+**Emergency Helplines (India):**
+📞 **iCall**: 9152987821 (Mon-Sat, 8am-10pm)
+📞 **Vandrevala Foundation**: 1860-2662-345 (24/7)
+📞 **NIMHANS**: 080-46110007 (24/7)
+📞 **Snehi**: 044-24640050 (24/7)
+
+**Please reach out to one of these numbers immediately.** They have trained counselors who understand what you're going through.
+
+If you're in immediate danger, please call **112** (Emergency) or go to your nearest hospital.
+
+You are not alone. There are people who care about you and want to help. 💙`,
+  source: "Crisis Support • Please Reach Out",
+  isCrisis: true
+};
+
+const checkForCrisis = (text: string): boolean => {
+  const lowerText = text.toLowerCase();
+  return CRISIS_KEYWORDS.some(keyword => lowerText.includes(keyword.toLowerCase()));
+};
+
 export default function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -117,6 +147,21 @@ export default function Chatbot() {
     const userMsg = { role: "user", text: userMessage };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
+    
+    if (checkForCrisis(userMessage)) {
+      setIsTyping(true);
+      setTimeout(() => {
+        const crisisMsg = {
+          role: "bot",
+          text: CRISIS_RESPONSE.text,
+          source: CRISIS_RESPONSE.source
+        };
+        setMessages(prev => [...prev, crisisMsg]);
+        setIsTyping(false);
+      }, 500);
+      return;
+    }
+    
     setIsTyping(true);
 
     try {
