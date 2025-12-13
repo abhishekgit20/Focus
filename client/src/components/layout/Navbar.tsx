@@ -44,7 +44,6 @@ export function Navbar() {
     { href: "/therapists", label: "Professionals" },
     { href: "/recommendations", label: "Reads" },
     { href: "/partner", label: "For Professionals" },
-    { href: "/wallet", label: "Wallet" },
     { href: "/about", label: "About" },
   ];
 
@@ -110,6 +109,9 @@ export function Navbar() {
                 <Link href="/profile">
                   <DropdownMenuItem className="cursor-pointer">My Profile</DropdownMenuItem>
                 </Link>
+                <Link href="/wallet">
+                  <DropdownMenuItem className="cursor-pointer">Wallet (₹0.00)</DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" /> Logout
@@ -149,6 +151,9 @@ export function Navbar() {
             <>
               <Link href="/profile" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
                 My Profile
+              </Link>
+              <Link href="/wallet" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                Wallet (₹0.00)
               </Link>
               <Button 
                 variant="ghost" 
