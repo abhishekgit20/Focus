@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
@@ -28,6 +28,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const MOOD_DATA = [
   { day: "Mon", score: 6 },
@@ -99,6 +106,7 @@ export default function Profile() {
   const [journalEntry, setJournalEntry] = useState("");
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isAutoRotating, setIsAutoRotating] = useState(true);
+  const [userGender, setUserGender] = useState(localStorage.getItem('userGender') || 'male');
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -139,6 +147,15 @@ export default function Profile() {
     });
     setJournalEntry("");
     setIsJournalOpen(false);
+  };
+
+  const handleGenderChange = (value: string) => {
+    setUserGender(value);
+    localStorage.setItem('userGender', value);
+    toast({
+      title: "Preference Updated",
+      description: `Voice assistant will now use a ${value === 'male' ? 'female' : 'male'} voice.`,
+    });
   };
 
   return (
@@ -202,6 +219,34 @@ export default function Profile() {
                     <div className="text-2xl font-bold text-green-600">240</div>
                     <div className="text-xs text-muted-foreground">Minutes</div>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Settings className="w-4 h-4" /> Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gender-select" className="text-sm text-muted-foreground">
+                    Your Gender
+                  </Label>
+                  <Select value={userGender} onValueChange={handleGenderChange}>
+                    <SelectTrigger id="gender-select" className="w-full" data-testid="select-gender">
+                      <SelectValue placeholder="Select your gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male" data-testid="option-male">Male</SelectItem>
+                      <SelectItem value="female" data-testid="option-female">Female</SelectItem>
+                      <SelectItem value="other" data-testid="option-other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This helps personalize your AI assistant's voice
+                  </p>
                 </div>
               </CardContent>
             </Card>

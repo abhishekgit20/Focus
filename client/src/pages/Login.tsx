@@ -30,6 +30,11 @@ export default function Login() {
       localStorage.setItem('userRole', response.user.role);
       localStorage.setItem('userName', response.user.fullName);
       localStorage.setItem('userEmail', response.user.email);
+      if (response.user.gender) {
+        localStorage.setItem('userGender', response.user.gender);
+      } else {
+        localStorage.removeItem('userGender');
+      }
       window.dispatchEvent(new Event('auth-change'));
       
       toast.success(`Welcome back, ${response.user.fullName}!`);

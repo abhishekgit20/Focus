@@ -104,13 +104,44 @@ export function ChatWidget() {
       utterance.lang = detected.code;
       
       const voices = window.speechSynthesis.getVoices();
-      const matchingVoice = voices.find(v => 
-        v.lang.includes(detected.code) || 
-        v.lang.includes(detected.code.split('-')[0])
-      );
       
-      if (matchingVoice) {
-        utterance.voice = matchingVoice;
+      // Get user gender from localStorage and select opposite gender voice
+      const userGender = localStorage.getItem('userGender') || 'male';
+      const voiceGender = userGender === 'male' ? 'female' : 'male';
+      
+      // Female voice patterns (common female voice names)
+      const femaleVoicePatterns = ['female', 'samantha', 'zira', 'victoria', 'karen', 'moira', 'tessa', 'fiona', 'veena', 'lekha', 'sangeeta', 'priya', 'aditi'];
+      // Male voice patterns (common male voice names)
+      const maleVoicePatterns = ['male', 'david', 'daniel', 'alex', 'fred', 'tom', 'rishi', 'matthew', 'mark', 'james'];
+      
+      const voicePatterns = voiceGender === 'female' ? femaleVoicePatterns : maleVoicePatterns;
+      
+      // First try to find a gender-appropriate voice matching the language
+      let selectedVoice = voices.find(v => {
+        const nameLower = v.name.toLowerCase();
+        const matchesLang = v.lang.includes(detected.code) || v.lang.includes(detected.code.split('-')[0]);
+        const matchesGender = voicePatterns.some(pattern => nameLower.includes(pattern));
+        return matchesLang && matchesGender;
+      });
+      
+      // If no gender-matched voice for language, try any voice with correct gender
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => {
+          const nameLower = v.name.toLowerCase();
+          return voicePatterns.some(pattern => nameLower.includes(pattern));
+        });
+      }
+      
+      // Fallback to language-matched voice
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => 
+          v.lang.includes(detected.code) || 
+          v.lang.includes(detected.code.split('-')[0])
+        );
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
       }
 
       utterance.onend = () => setSpeakingIndex(null);
