@@ -15,6 +15,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { getRazorpayClient, getRazorpayKeyId, verifyPaymentSignature } from "./razorpayClient";
 
 const requireAuth = isAuthenticated;
 
@@ -290,6 +291,103 @@ export async function registerRoutes(
       
       res.json({ wallet: updatedWallet });
     } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==================== RAZORPAY (UPI) ROUTES ====================
+
+  // Get Razorpay config (key ID for frontend)
+  app.get("/api/razorpay/config", async (req, res, next) => {
+    try {
+      const keyId = getRazorpayKeyId();
+      res.json({ keyId });
+    } catch (error) {
+      res.status(500).json({ error: "Razorpay not configured" });
+    }
+  });
+
+  // Create Razorpay order for UPI payment
+  app.post("/api/wallet/razorpay-order", requireClient, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const { amount, packName } = req.body;
+      const userId = user.dbUser?.id || user.claims?.sub;
+
+      if (!amount || amount < 100) {
+        return res.status(400).json({ error: "Minimum recharge amount is ₹100" });
+      }
+
+      const existingWallet = await storage.getWallet(userId);
+      if (!existingWallet) {
+        await storage.createWallet({ userId, balance: "0", totalRecharged: "0" });
+      }
+
+      const razorpay = getRazorpayClient();
+      const order = await razorpay.orders.create({
+        amount: amount * 100,
+        currency: "INR",
+        receipt: `wallet_${userId}_${Date.now()}`,
+        notes: {
+          userId,
+          amount: amount.toString(),
+          type: "wallet_recharge",
+          packName: packName || `Wallet Recharge - ₹${amount}`,
+        },
+      });
+
+      res.json({
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: getRazorpayKeyId(),
+      });
+    } catch (error) {
+      console.error("Razorpay order error:", error);
+      next(error);
+    }
+  });
+
+  // Verify Razorpay payment and credit wallet
+  app.post("/api/wallet/razorpay-verify", requireClient, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
+      const userId = user.dbUser?.id || user.claims?.sub;
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ error: "Missing payment details" });
+      }
+
+      const isValid = verifyPaymentSignature(
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature
+      );
+
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid payment signature" });
+      }
+
+      const wallet = await storage.getWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+
+      const rechargeAmount = parseFloat(amount);
+      const newBalance = (parseFloat(wallet.balance) + rechargeAmount).toFixed(2);
+      const updatedWallet = await storage.updateWalletBalance(wallet.id, newBalance);
+
+      await storage.addWalletTransaction({
+        walletId: wallet.id,
+        type: "recharge",
+        amount: rechargeAmount.toString(),
+        description: `UPI wallet recharge of ₹${rechargeAmount} (Payment ID: ${razorpay_payment_id})`,
+      });
+
+      res.json({ success: true, wallet: updatedWallet });
+    } catch (error) {
+      console.error("Razorpay verify error:", error);
       next(error);
     }
   });
