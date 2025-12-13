@@ -142,7 +142,7 @@ export default function Home() {
                 </Link>
                 <Link href="/chatbot">
                   <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none">
-                    Chat with Gita Bot
+                    Chat with Focus Wisdom Bot
                   </Button>
                 </Link>
               </div>
@@ -320,8 +320,8 @@ export default function Home() {
                 },
                 {
                   icon: <Sparkles className="w-8 h-8 text-primary" />,
-                  title: "Gita Wisdom Bot",
-                  desc: "Find peace and clarity through AI guidance based on the teachings of the Bhagavad Gita.",
+                  title: "Focus Wisdom Bot",
+                  desc: "Find peace and clarity through ChatGPT-powered AI guidance based on the teachings of the Bhagavad Gita.",
                   color: "bg-primary/20"
                 },
                 {
