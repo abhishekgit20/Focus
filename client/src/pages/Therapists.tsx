@@ -20,7 +20,7 @@ const professionals = [
     availability: "Available Today",
     image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200&h=200",
     tags: ["Hindi", "English", "CBT"],
-    price: "₹800/session"
+    price: "₹25/min"
   },
   {
     id: 2,
@@ -33,7 +33,7 @@ const professionals = [
     availability: "Next Class: 5 PM",
     image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200&h=200",
     tags: ["Hatha Yoga", "Vedic Wisdom", "Stress Relief"],
-    price: "₹500/session"
+    price: "₹15/min"
   },
   {
     id: 3,
@@ -46,7 +46,7 @@ const professionals = [
     availability: "Tomorrow",
     image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200",
     tags: ["Medication Management", "English", "Kannada"],
-    price: "₹1200/consultation"
+    price: "₹40/min"
   },
   {
     id: 4,
@@ -59,7 +59,7 @@ const professionals = [
     availability: "Available Today",
     image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200&h=200",
     tags: ["Gujarati", "Hindi", "Counseling"],
-    price: "₹700/session"
+    price: "₹20/min"
   }
 ];
 
@@ -214,9 +214,9 @@ export default function Therapists() {
                     className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
                     onClick={() => handleBookAppointment(prof.name)}
                   >
-                    Book Appointment
+                    Chat Now
                   </Button>
-                  <Button variant="outline" className="rounded-full text-sm">View Profile</Button>
+                  <Button variant="outline" className="rounded-full text-sm">Call Now</Button>
                 </div>
               </div>
             </div>

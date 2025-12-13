@@ -44,7 +44,7 @@ export function Navbar() {
     { href: "/therapists", label: "Professionals" },
     { href: "/recommendations", label: "Reads" },
     { href: "/partner", label: "For Professionals" },
-    { href: "/subscription", label: "Plans" },
+    { href: "/wallet", label: "Wallet" },
     { href: "/about", label: "About" },
   ];
 
