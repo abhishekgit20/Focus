@@ -301,7 +301,16 @@ export default function Consultation() {
                 />
                 <div>
                   <h2 className="font-semibold text-sm">{professional.name}</h2>
-                  <p className="text-xs opacity-80">{professional.title}</p>
+                  <p className="text-xs opacity-80">
+                    {professionalOnline ? (
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                        Online
+                      </span>
+                    ) : (
+                      professional.title
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
