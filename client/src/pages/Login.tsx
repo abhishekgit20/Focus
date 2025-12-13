@@ -137,10 +137,14 @@ export default function Login() {
               </Button>
             </div>
 
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              Don't have an account?{" "}
-              <a href="#" className="font-semibold text-primary hover:text-primary/80 transition-colors hover:underline underline-offset-4">Sign up for free</a>
-            </p>
+            <div className="mt-8 pt-6 border-t border-muted/30 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">Don't have an account?</p>
+              <Link href="/register">
+                <Button variant="outline" className="w-full h-11 rounded-xl border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary font-semibold transition-all shadow-sm">
+                  Create account in Focus
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
