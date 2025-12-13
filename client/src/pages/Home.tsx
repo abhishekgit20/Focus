@@ -266,10 +266,10 @@ export default function Home() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05, duration: 0.4 }}
                   viewport={{ once: true, margin: "-50px" }}
-                  className="bg-muted/30 p-8 rounded-3xl border relative"
+                  className="bg-muted/30 p-8 rounded-3xl border relative flex flex-col h-full"
                 >
-                  <Quote className="w-10 h-10 text-primary/20 absolute top-6 left-6" />
-                  <p className="text-lg mb-6 relative z-10 pt-4 text-muted-foreground italic">"{testimonial.quote}"</p>
+                  <Quote className="w-10 h-10 text-primary/30 mb-4" />
+                  <p className="text-lg mb-6 text-muted-foreground italic relative z-10 flex-grow">"{testimonial.quote}"</p>
                   <div>
                     <h4 className="font-bold">{testimonial.author}</h4>
                     <p className="text-sm text-muted-foreground">{testimonial.role}, {testimonial.loc}</p>
