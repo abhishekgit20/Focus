@@ -77,6 +77,9 @@ function Router() {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [location] = useLocation();
+  
+  const isFullscreenPage = location.startsWith("/consultation");
 
   useEffect(() => {
     // Preload critical images for Services and Home page
@@ -105,12 +108,12 @@ function App() {
             <SplashScreen key="splash" />
           ) : (
             <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative animate-in fade-in duration-700">
-              <Navbar />
+              {!isFullscreenPage && <Navbar />}
               <main className="flex-grow">
                 <Router />
               </main>
-              <Footer />
-              <ChatWidget />
+              {!isFullscreenPage && <Footer />}
+              {!isFullscreenPage && <ChatWidget />}
             </div>
           )}
         </AnimatePresence>
