@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageTransition } from "@/components/PageTransition";
 import { Eye, EyeOff, Facebook, Mail, Chrome, ArrowLeft, Loader2, Shield } from "lucide-react";
+import { login } from "@/lib/api";
+import { toast } from "sonner";
 import heroBg from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
 
 export default function Login() {
@@ -13,19 +15,32 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isProfessional, setIsProfessional] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate login delay
-    setTimeout(() => {
+    try {
+      const response = await login(email, password);
+      
+      // Store auth state in localStorage
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userRole', isProfessional ? 'professional' : 'client');
+      localStorage.setItem('userRole', response.user.role);
+      localStorage.setItem('userName', response.user.fullName);
+      localStorage.setItem('userEmail', response.user.email);
       window.dispatchEvent(new Event('auth-change'));
+      
+      toast.success(`Welcome back, ${response.user.fullName}!`);
+      
+      // Redirect based on role
+      setLocation(response.user.role === 'professional' ? "/professional-dashboard" : "/profile");
+    } catch (error: any) {
+      toast.error(error.message || "Login failed. Please check your credentials.");
+    } finally {
       setIsLoading(false);
-      setLocation(isProfessional ? "/professional-dashboard" : "/profile");
-    }, 1500);
+    }
   };
 
   return (
@@ -100,6 +115,8 @@ export default function Login() {
                     type="email" 
                     placeholder="you@example.com" 
                     className="pl-11 h-12 rounded-xl bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/30 focus-visible:border-primary text-base transition-all"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -116,6 +133,8 @@ export default function Login() {
                     type={showPassword ? "text" : "password"} 
                     placeholder="••••••••" 
                     className="pl-4 pr-11 h-12 rounded-xl bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/30 focus-visible:border-primary text-base transition-all"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                   <button
