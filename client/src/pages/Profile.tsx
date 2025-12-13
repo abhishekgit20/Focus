@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import {
@@ -49,11 +49,56 @@ const ACTIVITY_DATA = [
   { day: "Sun", mins: 45 },
 ];
 
+const WELLNESS_FACTS = [
+  {
+    fact: "Just 10 minutes of daily meditation can reduce anxiety by up to 30%.",
+    category: "Meditation",
+    icon: "🧘"
+  },
+  {
+    fact: "Gratitude journaling for 2 weeks can increase happiness levels for up to 6 months.",
+    category: "Journaling",
+    icon: "📝"
+  },
+  {
+    fact: "Regular deep breathing exercises can lower cortisol levels by 20%.",
+    category: "Breathing",
+    icon: "🌬️"
+  },
+  {
+    fact: "Walking in nature for 20 minutes reduces stress hormones more effectively than urban walks.",
+    category: "Nature",
+    icon: "🌿"
+  },
+  {
+    fact: "Social connections are as important for longevity as exercise and diet.",
+    category: "Connection",
+    icon: "🤝"
+  },
+  {
+    fact: "Getting 7-9 hours of sleep improves emotional regulation by 40%.",
+    category: "Sleep",
+    icon: "😴"
+  },
+  {
+    fact: "Practicing mindfulness can physically increase gray matter in the brain.",
+    category: "Mindfulness",
+    icon: "🧠"
+  },
+  {
+    fact: "Laughing for 15 minutes a day can burn up to 40 calories and boost immunity.",
+    category: "Joy",
+    icon: "😄"
+  }
+];
+
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [journalEntry, setJournalEntry] = useState("");
+  const [currentFactIndex, setCurrentFactIndex] = useState(0);
+  const [isAutoRotating, setIsAutoRotating] = useState(true);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -61,6 +106,29 @@ export default function Profile() {
       setLocation("/login");
     }
   }, [setLocation]);
+
+  useEffect(() => {
+    if (!isAutoRotating) return;
+    const interval = setInterval(() => {
+      setCurrentFactIndex((prev) => (prev + 1) % WELLNESS_FACTS.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isAutoRotating]);
+
+  const goToPrevFact = () => {
+    setIsAutoRotating(false);
+    setCurrentFactIndex((prev) => (prev - 1 + WELLNESS_FACTS.length) % WELLNESS_FACTS.length);
+  };
+
+  const goToNextFact = () => {
+    setIsAutoRotating(false);
+    setCurrentFactIndex((prev) => (prev + 1) % WELLNESS_FACTS.length);
+  };
+
+  const goToFact = (index: number) => {
+    setIsAutoRotating(false);
+    setCurrentFactIndex(index);
+  };
 
   const handleSaveJournal = () => {
     if (!journalEntry.trim()) return;
@@ -193,6 +261,76 @@ export default function Profile() {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="relative overflow-hidden border-none shadow-lg bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50" data-testid="did-you-know-section">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-yellow-200/30 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+              <CardContent className="p-6 relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <Lightbulb className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <h3 className="text-lg font-bold font-serif text-amber-900">Did You Know?</h3>
+                  </div>
+                  <Badge variant="outline" className="bg-white/70 text-amber-700 border-amber-200" data-testid="fact-category">
+                    {WELLNESS_FACTS[currentFactIndex].category}
+                  </Badge>
+                </div>
+                
+                <div className="relative min-h-[80px] flex items-center">
+                  <button 
+                    onClick={goToPrevFact}
+                    className="absolute -left-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm border border-amber-100 text-amber-600 hover:text-amber-800 transition-all"
+                    aria-label="Previous fact"
+                    data-testid="button-prev-fact"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentFactIndex}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex-1 px-8 text-center"
+                    >
+                      <span className="text-3xl mb-2 block">{WELLNESS_FACTS[currentFactIndex].icon}</span>
+                      <p className="text-base text-amber-900 font-medium leading-relaxed" data-testid="text-wellness-fact">
+                        {WELLNESS_FACTS[currentFactIndex].fact}
+                      </p>
+                    </motion.div>
+                  </AnimatePresence>
+                  
+                  <button 
+                    onClick={goToNextFact}
+                    className="absolute -right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm border border-amber-100 text-amber-600 hover:text-amber-800 transition-all"
+                    aria-label="Next fact"
+                    data-testid="button-next-fact"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {WELLNESS_FACTS.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToFact(index)}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                        index === currentFactIndex 
+                          ? 'bg-amber-500 w-6' 
+                          : 'bg-amber-200 hover:bg-amber-300'
+                      }`}
+                      aria-label={`Go to fact ${index + 1}`}
+                      data-testid={`button-fact-dot-${index}`}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             <Tabs defaultValue="mood" className="w-full">
               <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mb-6">
