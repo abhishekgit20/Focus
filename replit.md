@@ -52,8 +52,12 @@ Preferred communication style: Simple, everyday language.
 - **Crisis Detection**: Keyword-based detection with immediate helpline responses
 
 ### Payment Integration
-- **Provider**: Stripe via Replit Connectors
-- **Sync Library**: stripe-replit-sync for webhook management and data synchronization
+- **Primary Provider**: Stripe via Replit Connectors (for international cards)
+  - Sync Library: stripe-replit-sync for webhook management and data synchronization
+- **UPI Provider**: Razorpay (for Indian UPI payments)
+  - Client: `server/razorpayClient.ts` with HMAC-SHA256 signature verification
+  - Order tracking via `payment_orders` table for security and replay prevention
+  - Required secrets: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
 - **Model**: Wallet-based prepaid system with per-minute billing for consultations
 
 ### Project Structure
