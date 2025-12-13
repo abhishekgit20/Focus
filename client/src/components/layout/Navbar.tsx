@@ -96,7 +96,9 @@ export function Navbar() {
           </DropdownMenu>
 
           {isLoggedIn ? (
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={(open) => {
+              if (open) window.dispatchEvent(new Event('hide-crisis-banner'));
+            }}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full w-9 h-9">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">

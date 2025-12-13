@@ -6,12 +6,15 @@ export function CrisisBanner() {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    // Listen for chat open events
-    const handleChatOpen = () => setIsVisible(false);
-    window.addEventListener('chat-widget-opened', handleChatOpen);
+    // Listen for events to hide banner
+    const handleHide = () => setIsVisible(false);
+    
+    window.addEventListener('chat-widget-opened', handleHide);
+    window.addEventListener('hide-crisis-banner', handleHide);
     
     return () => {
-      window.removeEventListener('chat-widget-opened', handleChatOpen);
+      window.removeEventListener('chat-widget-opened', handleHide);
+      window.removeEventListener('hide-crisis-banner', handleHide);
     };
   }, []);
 
