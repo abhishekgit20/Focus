@@ -46,7 +46,7 @@ export default function Login() {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="flex flex-col justify-center p-8 bg-background relative min-h-screen lg:min-h-0">
+        <div className="flex flex-col justify-start lg:justify-center p-8 bg-background relative min-h-screen lg:min-h-0 pt-32 lg:pt-8">
           <div className="absolute top-8 left-8 z-10">
             <Link href="/">
               <Button variant="ghost" className="gap-2 hover:bg-muted/50 rounded-full">
@@ -55,7 +55,7 @@ export default function Login() {
             </Link>
           </div>
 
-          <div className="w-full max-w-[420px] mx-auto space-y-8 mt-24 lg:mt-0">
+          <div className="w-full max-w-[420px] mx-auto space-y-8">
             <div className="text-left space-y-2">
               <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground tracking-tight">Welcome Back</h1>
               <p className="text-base text-muted-foreground">Sign in to continue your journey to wellness.</p>
