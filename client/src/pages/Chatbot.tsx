@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
 import { Send, User, Sparkles, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { GITA_VERSES, FALLBACK_QUOTES, generateAIResponse } from "@/lib/gitaData";
 
 interface Message {
   role: string;
@@ -16,50 +15,84 @@ interface Message {
   isThinking?: boolean;
 }
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: "bot", 
-      text: "Namaste! I am your companion for peace and clarity. I can offer guidance based on the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind.",
-      source: "Gita Bot"
+      text: "Namaste! I am your companion for peace and clarity, powered by advanced AI and the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind. I'm here to listen and offer guidance.",
+      source: "Focus Wisdom Bot • Powered by ChatGPT"
     }
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping]); // Scroll when typing starts too
+  }, [messages, isTyping]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
     
-    const userMsg = { role: "user", text: input };
+    const userMessage = input.trim();
+    const userMsg = { role: "user", text: userMessage };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI "thinking" process with variable delay
-    const thinkingTime = Math.random() * 1000 + 1500; // 1.5s - 2.5s
-    
-    setTimeout(async () => {
-      // Use shared logic to find wisdom
-      const response = generateAIResponse(input);
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: userMessage,
+          conversationHistory: conversationHistory
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
       
+      setConversationHistory(prev => [
+        ...prev,
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: data.response }
+      ]);
+
       const botResponse = {
         role: "bot",
-        text: response.text,
-        sanskrit: response.sanskrit,
-        purport: response.purport,
-        source: response.source
+        text: data.response,
+        source: data.bhagavadGitaReference 
+          ? `Bhagavad Gita Reference: ${data.bhagavadGitaReference}` 
+          : "Focus Wisdom Bot • Powered by ChatGPT"
       };
 
       setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorResponse = {
+        role: "bot",
+        text: "I apologize, but I'm having trouble connecting right now. Please try again in a moment. If you need immediate support, please reach out to a professional therapist.",
+        source: "System Message"
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, thinkingTime);
+    }
   };
 
   return (
@@ -80,7 +113,7 @@ export default function Chatbot() {
                 Focus Wisdom Bot <Sparkles className="w-4 h-4 text-primary" />
               </h2>
               <p className="text-xs text-muted-foreground">
-                Powered by Ancient Indian Wisdom & AI
+                Powered by ChatGPT & Ancient Indian Wisdom
               </p>
             </div>
           </div>
