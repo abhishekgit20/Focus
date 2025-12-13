@@ -91,12 +91,14 @@ wss.on("connection", (ws, req) => {
     // Notify remaining participants
     room.clients.forEach((client) => {
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify({
+        const message = {
           type: "user_left",
           userId,
           userRole,
           timestamp: new Date().toISOString(),
-        }));
+        };
+        log(`Sending user_left to ${client.userId} (${client.role}): ${JSON.stringify(message)}`, "websocket");
+        client.ws.send(JSON.stringify(message));
       }
     });
 

@@ -76,6 +76,7 @@ export default function ProfessionalChat() {
     ws.onmessage = (event) => {
       try {
         const data: WSIncoming = JSON.parse(event.data);
+        console.log("Professional received WS message:", data);
         
         if (data.type === "message" && data.userRole === "client") {
           const newMessage: Message = {
@@ -92,8 +93,9 @@ export default function ProfessionalChat() {
             description: "A client has joined the session.",
           });
         } else if (data.type === "user_left" && data.userRole === "client") {
+          console.log("Client left - ending session for professional");
           setClientOnline(false);
-          setIsConnected(false); // Stop the timer
+          setIsConnected(false);
           toast({
             title: "Session Ended",
             description: "The client has ended the session.",
