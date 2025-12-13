@@ -93,9 +93,11 @@ export default function ProfessionalChat() {
           });
         } else if (data.type === "user_left" && data.userRole === "client") {
           setClientOnline(false);
+          setIsConnected(false); // Stop the timer
           toast({
-            title: "Client Disconnected",
-            description: "The client has left the session.",
+            title: "Session Ended",
+            description: "The client has ended the session.",
+            variant: "destructive",
           });
         }
       } catch (error) {
