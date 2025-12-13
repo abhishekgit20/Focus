@@ -312,7 +312,7 @@ export default function Home() {
                   color: "bg-secondary/20"
                 },
                 {
-                  icon: <Sparkles className="w-8 h-8 text-primary-foreground" />,
+                  icon: <Sparkles className="w-8 h-8 text-primary" />,
                   title: "Gita Wisdom Bot",
                   desc: "Find peace and clarity through AI guidance based on the teachings of the Bhagavad Gita.",
                   color: "bg-primary/20"
