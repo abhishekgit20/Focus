@@ -277,6 +277,13 @@ export default function Home() {
                 </motion.div>
               ))}
             </div>
+            <div className="text-center mt-12">
+              <Link href="/feedback">
+                <Button variant="outline" className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary gap-2">
+                  <MessageCircle className="w-4 h-4" /> Share Your Story
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 

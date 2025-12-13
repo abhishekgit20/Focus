@@ -30,9 +30,10 @@ import Profile from "@/pages/Profile";
 const Chatbot = lazy(() => import("@/pages/Chatbot"));
 const Login = lazy(() => import("@/pages/Login"));
 const Recommendations = lazy(() => import("@/pages/Recommendations"));
-const About = lazy(() => import("@/pages/About"));
-const FormulaGuide = lazy(() => import("@/pages/FormulaGuide"));
-const NotFound = lazy(() => import("@/pages/not-found"));
+import About from "@/pages/About";
+import Feedback from "@/pages/Feedback";
+import FormulaGuide from "@/pages/FormulaGuide";
+import NotFound from "@/pages/not-found";
 
 function PageLoader() {
   return (
@@ -54,6 +55,7 @@ function Router() {
           <Route path="/therapists" component={Therapists} />
           <Route path="/recommendations" component={Recommendations} />
           <Route path="/about" component={About} />
+          <Route path="/feedback" component={Feedback} />
           <Route path="/chatbot" component={Chatbot} />
           <Route path="/login" component={Login} />
           <Route path="/profile" component={Profile} />

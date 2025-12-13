@@ -15,6 +15,7 @@ export function Footer() {
           <a href="#" className="hover:text-primary transition-colors">Privacy</a>
           <a href="#" className="hover:text-primary transition-colors">Terms</a>
           <a href="#" className="hover:text-primary transition-colors">Contact</a>
+          <Link href="/feedback" className="hover:text-primary transition-colors">Feedback</Link>
         </div>
         <p className="mt-8 text-xs text-muted-foreground/50">
           © 2025 Focus India. All rights reserved.
