@@ -116,6 +116,56 @@ export async function registerRoutes(
       next(error);
     }
   });
+
+  // Login user (for email/password login)
+  app.post("/api/auth/login", async (req, res, next) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.password) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Set user in session
+      (req.session as any).userId = user.id;
+      (req.session as any).user = {
+        claims: { sub: user.id },
+        dbUser: user,
+      };
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          fullName: user.fullName,
+          profileImage: user.profileImage,
+        } 
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Logout user
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
   
   // Get current user (legacy endpoint)
   app.get("/api/auth/me", requireAuth, async (req: any, res) => {
