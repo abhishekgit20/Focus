@@ -69,21 +69,18 @@ export default function Therapists() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const handleBookAppointment = (profName: string) => {
+  const handleStartSession = (profId: number, type: "chat" | "call") => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
     if (!isLoggedIn) {
       toast({
         title: "Login Required",
-        description: "Please sign in to book an appointment with our professionals.",
+        description: "Please sign in to start a session with our professionals.",
         variant: "destructive",
       });
       setLocation("/login");
     } else {
-      toast({
-        title: "Booking Request Sent",
-        description: `We have notified ${profName}. They will contact you shortly.`,
-      });
+      setLocation(`/consultation/${profId}/${type}`);
     }
   };
 
@@ -212,11 +209,19 @@ export default function Therapists() {
                 <div className="flex gap-3 mt-auto">
                   <Button 
                     className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
-                    onClick={() => handleBookAppointment(prof.name)}
+                    onClick={() => handleStartSession(prof.id, "chat")}
+                    data-testid={`button-chat-${prof.id}`}
                   >
                     Chat Now
                   </Button>
-                  <Button variant="outline" className="rounded-full text-sm">Call Now</Button>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-full text-sm"
+                    onClick={() => handleStartSession(prof.id, "call")}
+                    data-testid={`button-call-${prof.id}`}
+                  >
+                    Call Now
+                  </Button>
                 </div>
               </div>
             </div>
