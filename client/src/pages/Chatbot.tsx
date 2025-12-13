@@ -55,7 +55,7 @@ export default function Chatbot() {
     { 
       role: "bot", 
       text: "Namaste! I am your companion for peace and clarity, powered by advanced AI and the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind. I'm here to listen and offer guidance.",
-      source: "Focus Wisdom Bot • Powered by ChatGPT"
+      source: "Gita Bot • Powered by ChatGPT"
     }
   ]);
   const [input, setInput] = useState("");
@@ -225,7 +225,7 @@ export default function Chatbot() {
             </div>
             <div>
               <h2 className="font-bold text-xl font-serif text-primary flex items-center gap-2">
-                Focus Wisdom Bot <Sparkles className="w-4 h-4 text-primary" />
+                Gita Bot <Sparkles className="w-4 h-4 text-primary" />
               </h2>
               <p className="text-xs text-muted-foreground">
                 Powered by ChatGPT & Ancient Indian Wisdom

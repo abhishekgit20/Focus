@@ -76,7 +76,7 @@ export function ChatWidget() {
     { 
       role: "bot", 
       text: "Namaste! I am your companion for peace and clarity, powered by ChatGPT and the wisdom of the Bhagavad Gita. What is troubling your mind today?",
-      source: "Focus Wisdom Bot • Powered by ChatGPT"
+      source: "Gita Bot • Powered by ChatGPT"
     }
   ]);
   const [input, setInput] = useState("");
@@ -227,7 +227,7 @@ export function ChatWidget() {
             </div>
             <div className="text-left">
               <SheetTitle className="text-lg font-serif flex items-center gap-2">
-                Focus Wisdom Bot <Sparkles className="w-4 h-4 text-primary" />
+                Gita Bot <Sparkles className="w-4 h-4 text-primary" />
               </SheetTitle>
               <p className="text-xs text-muted-foreground">Online • Powered by ChatGPT</p>
             </div>
