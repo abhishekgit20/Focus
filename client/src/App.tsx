@@ -34,6 +34,7 @@ import About from "@/pages/About";
 import Feedback from "@/pages/Feedback";
 import FormulaGuide from "@/pages/FormulaGuide";
 import PartnerWithUs from "@/pages/PartnerWithUs";
+import Subscription from "@/pages/Subscription";
 import NotFound from "@/pages/not-found";
 
 function PageLoader() {
@@ -61,6 +62,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/profile" component={Profile} />
           <Route path="/partner" component={PartnerWithUs} />
+          <Route path="/subscription" component={Subscription} />
           <Route path="/formula-guide" component={FormulaGuide} />
           <Route component={NotFound} />
         </Switch>
