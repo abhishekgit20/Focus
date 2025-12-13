@@ -104,30 +104,22 @@ export default function Chatbot() {
       
       const voices = window.speechSynthesis.getVoices();
       
-      // Get user gender from localStorage and select opposite gender voice
-      const userGender = localStorage.getItem('userGender') || 'male';
-      const voiceGender = userGender === 'male' ? 'female' : 'male';
-      
-      // Female voice patterns (common female voice names)
+      // Use a soothing female voice for the AI assistant
       const femaleVoicePatterns = ['female', 'samantha', 'zira', 'victoria', 'karen', 'moira', 'tessa', 'fiona', 'veena', 'lekha', 'sangeeta', 'priya', 'aditi'];
-      // Male voice patterns (common male voice names)
-      const maleVoicePatterns = ['male', 'david', 'daniel', 'alex', 'fred', 'tom', 'rishi', 'matthew', 'mark', 'james'];
       
-      const voicePatterns = voiceGender === 'female' ? femaleVoicePatterns : maleVoicePatterns;
-      
-      // First try to find a gender-appropriate voice matching the language
+      // First try to find a female voice matching the language
       let selectedVoice = voices.find(v => {
         const nameLower = v.name.toLowerCase();
         const matchesLang = v.lang.includes(detected.code) || v.lang.includes(detected.code.split('-')[0]);
-        const matchesGender = voicePatterns.some(pattern => nameLower.includes(pattern));
-        return matchesLang && matchesGender;
+        const matchesFemale = femaleVoicePatterns.some(pattern => nameLower.includes(pattern));
+        return matchesLang && matchesFemale;
       });
       
-      // If no gender-matched voice for language, try any voice with correct gender
+      // If no female voice for language, try any female voice
       if (!selectedVoice) {
         selectedVoice = voices.find(v => {
           const nameLower = v.name.toLowerCase();
-          return voicePatterns.some(pattern => nameLower.includes(pattern));
+          return femaleVoicePatterns.some(pattern => nameLower.includes(pattern));
         });
       }
       
