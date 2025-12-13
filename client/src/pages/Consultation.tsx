@@ -170,10 +170,14 @@ export default function Consultation() {
           if (wsRef.current) {
             wsRef.current.close();
           }
+          // Show session summary with duration and cost
+          const mins = Math.floor(sessionDuration / 60);
+          const secs = sessionDuration % 60;
+          const duration = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+          const cost = ((sessionDuration / 60) * professional.ratePerMinute).toFixed(2);
           toast({
             title: "Session Ended",
-            description: `${professional.name} has ended the session.`,
-            variant: "destructive",
+            description: `Duration: ${duration} | Total: ₹${cost}`,
           });
         }
       } catch (error) {
