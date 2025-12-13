@@ -46,7 +46,8 @@ export function Navbar() {
     { href: "/services", label: "Services" },
     { href: "/therapists", label: "Professionals" },
     { href: "/recommendations", label: "Reads" },
-    { href: "/partner", label: "For Professionals" },
+    // Only show "For Professionals" if not logged in
+    ...(!isLoggedIn ? [{ href: "/partner", label: "For Professionals" }] : []),
     { href: "/about", label: "About" },
   ];
 
