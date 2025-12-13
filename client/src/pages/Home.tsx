@@ -349,17 +349,18 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 font-serif">How Focus Works</h2>
-              <p className="text-muted-foreground text-lg">Your journey to wellness in 3 simple steps.</p>
+              <p className="text-muted-foreground text-lg">Your journey to wellness in 4 simple steps.</p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 relative">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
               {/* Connecting Line (Desktop) */}
-              <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent z-0" />
+              <div className="hidden lg:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent z-0" />
 
               {[
                 { step: "01", title: "Choose Your Guide", desc: "Browse verified psychologists, therapists, or yoga gurus based on your needs." },
                 { step: "02", title: "Book a Session", desc: "Schedule a video, audio, or chat session at a time that works for you." },
-                { step: "03", title: "Begin Healing", desc: "Connect securely and start your journey towards mental peace and clarity." }
+                { step: "03", title: "Begin Healing", desc: "Connect securely and start your journey towards mental peace and clarity." },
+                { step: "04", title: "Track Your Journey", desc: "Monitor your mood, journal your thoughts, and earn XP as you heal.", link: "/profile" }
               ].map((item, i) => (
                 <motion.div 
                   key={i}
@@ -367,12 +368,29 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.2 }}
                   viewport={{ once: true }}
-                  className="relative z-10 text-center"
+                  className="relative z-10 text-center flex flex-col items-center h-full"
                 >
-                  <div className="w-24 h-24 mx-auto rounded-full bg-background border-4 border-primary/10 flex items-center justify-center text-3xl font-bold text-primary mb-6 shadow-sm">
-                    {item.step}
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 font-serif">{item.title}</h3>
+                  {item.link ? (
+                    <Link href={item.link}>
+                      <div className="w-24 h-24 mx-auto rounded-full bg-background border-4 border-primary/10 flex items-center justify-center text-3xl font-bold text-primary mb-6 shadow-sm cursor-pointer hover:border-primary/40 hover:scale-105 transition-all">
+                        {item.step}
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="w-24 h-24 mx-auto rounded-full bg-background border-4 border-primary/10 flex items-center justify-center text-3xl font-bold text-primary mb-6 shadow-sm">
+                      {item.step}
+                    </div>
+                  )}
+                  
+                  <h3 className="text-xl font-bold mb-3 font-serif">
+                    {item.link ? (
+                      <Link href={item.link} className="hover:text-primary transition-colors">
+                        {item.title}
+                      </Link>
+                    ) : (
+                      item.title
+                    )}
+                  </h3>
                   <p className="text-muted-foreground max-w-xs mx-auto">{item.desc}</p>
                 </motion.div>
               ))}
