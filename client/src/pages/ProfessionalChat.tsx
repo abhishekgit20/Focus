@@ -69,6 +69,7 @@ export default function ProfessionalChat() {
     
     ws.onopen = () => {
       setIsConnected(true);
+      setClientOnline(true); // Client must be online since they created the session
       console.log("Professional WebSocket connected");
     };
     
