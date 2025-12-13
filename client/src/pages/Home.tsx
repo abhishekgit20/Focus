@@ -86,14 +86,14 @@ export default function Home() {
             style={{ y: heroY, opacity: heroOpacity }}
             className="absolute inset-0 z-0"
           >
-             {/* Gradient Overlay - Always on top of media */}
-             <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background z-20 pointer-events-none" />
+             {/* Gradient Overlay - Only at the bottom for text transition */}
+             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background z-20 pointer-events-none" />
             
             {/* Permanent Background Image - Serves as immediate visual and fallback */}
             <img 
               src={imageSrc} 
               alt="Background" 
-              className="absolute inset-0 w-full h-full object-cover z-0 brightness-75"
+              className="absolute inset-0 w-full h-full object-cover z-0"
               loading="eager"
               fetchPriority="high"
               decoding="async"
@@ -112,7 +112,7 @@ export default function Home() {
                   // Keep the image visible for 5 seconds before fading in the video
                   setTimeout(() => setIsVideoLoaded(true), 5000);
                 }}
-                className={`absolute inset-0 w-full h-full object-cover z-10 brightness-75 transition-opacity duration-[2000ms] ease-in-out ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-[2000ms] ease-in-out ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
           </motion.div>
