@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Stethoscope, UserCheck, Heart, ArrowRight, CheckCircle2, Building2 } from "lucide-react";
+import { Stethoscope, UserCheck, Heart, ArrowRight, CheckCircle2, Building2, Calendar, TrendingUp, ShieldCheck } from "lucide-react";
 import heroBg from "@assets/generated_images/professional_indian_doctors_and_therapists_collaborating.png";
+import dashboardImg from "@assets/generated_images/digital_dashboard_for_doctors_on_tablet.png";
 
 export default function PartnerWithUs() {
   const { toast } = useToast();
@@ -54,7 +55,7 @@ export default function PartnerWithUs() {
                 <Button size="lg" className="rounded-full bg-primary hover:bg-primary/90 text-white px-8" onClick={() => document.getElementById('register-form')?.scrollIntoView({ behavior: 'smooth' })}>
                   Join Network
                 </Button>
-                <Button size="lg" variant="outline" className="rounded-full text-white border-white/30 hover:bg-white/10 px-8">
+                <Button size="lg" variant="outline" className="rounded-full text-white border-white/30 hover:bg-white/10 px-8" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
                   Learn More
                 </Button>
               </div>
@@ -62,7 +63,50 @@ export default function PartnerWithUs() {
           </div>
         </section>
 
-        <div className="container mx-auto px-4 py-16 -mt-20 relative z-30">
+        {/* How it Works Section */}
+        <section id="how-it-works" className="py-20 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 font-serif">How Focus Works for Partners</h2>
+              <p className="text-muted-foreground text-lg">Four simple steps to grow your practice and help more people.</p>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-8">
+              {[
+                {
+                  icon: <UserCheck className="w-8 h-8 text-primary" />,
+                  title: "Register & Verify",
+                  desc: "Complete your profile and upload credentials for our verification team."
+                },
+                {
+                  icon: <Calendar className="w-8 h-8 text-secondary" />,
+                  title: "Set Availability",
+                  desc: "Manage your calendar and set your consultation hours easily."
+                },
+                {
+                  icon: <TrendingUp className="w-8 h-8 text-green-600" />,
+                  title: "Grow Practice",
+                  desc: "Get discovered by patients looking for your specific expertise."
+                },
+                {
+                  icon: <ShieldCheck className="w-8 h-8 text-blue-600" />,
+                  title: "Secure Payment",
+                  desc: "Receive payments directly to your account with our secure gateway."
+                }
+              ].map((step, i) => (
+                <div key={i} className="bg-background p-8 rounded-2xl border shadow-sm hover:shadow-md transition-all text-center group">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    {step.icon}
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
+                  <p className="text-muted-foreground">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <div className="container mx-auto px-4 py-16 relative z-30">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Benefits Sidebar */}
             <div className="lg:col-span-1 space-y-6">
