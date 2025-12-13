@@ -58,10 +58,11 @@ export default function ProfessionalChat() {
   });
 
   const connectWebSocket = useCallback(() => {
-    if (!user || !sessionId) return;
+    if (!sessionId) return;
     
+    const odId = user?.id || `pro_${Date.now()}`;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${sessionId}&userId=${user.id}&role=professional`;
+    const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${sessionId}&userId=${odId}&role=professional`;
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -114,7 +115,7 @@ export default function ProfessionalChat() {
   }, [user, sessionId, toast]);
 
   useEffect(() => {
-    if (sessionId && user) {
+    if (sessionId) {
       connectWebSocket();
     }
     
@@ -123,7 +124,7 @@ export default function ProfessionalChat() {
         wsRef.current.close();
       }
     };
-  }, [sessionId, user, connectWebSocket]);
+  }, [sessionId, connectWebSocket]);
 
   useEffect(() => {
     if (isConnected) {

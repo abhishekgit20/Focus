@@ -123,10 +123,10 @@ export default function Consultation() {
   
   // WebSocket connection handler
   const connectWebSocket = useCallback(() => {
-    if (!user) return;
+    const odId = user?.id || `guest_${Date.now()}`;
     
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${sessionIdRef.current}&userId=${user.id}&role=client`;
+    const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${sessionIdRef.current}&userId=${odId}&role=client`;
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -243,7 +243,7 @@ export default function Consultation() {
   };
 
   const sendMessage = () => {
-    if (!inputMessage.trim() || !isSessionActive || !user) return;
+    if (!inputMessage.trim() || !isSessionActive) return;
     
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -259,7 +259,7 @@ export default function Consultation() {
       wsRef.current.send(JSON.stringify({
         type: "message",
         sessionId: sessionIdRef.current,
-        userId: user.id.toString(),
+        userId: user?.id?.toString() || "guest",
         userRole: "client",
         content: inputMessage,
       }));
