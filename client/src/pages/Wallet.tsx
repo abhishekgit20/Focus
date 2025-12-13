@@ -2,9 +2,8 @@ import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, CreditCard, ShieldCheck, ArrowRight, Zap, Gift } from "lucide-react";
+import { Wallet, CreditCard, ShieldCheck, ArrowRight, Zap, Gift, Lock, UserCheck, Headset } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import walletImg from "@assets/generated_images/digital_wallet_interface_with_indian_rupee_balance.png";
 
 export default function WalletPage() {
   const { toast } = useToast();
@@ -131,12 +130,40 @@ export default function WalletPage() {
                 </CardContent>
               </Card>
 
-              <div className="bg-background rounded-2xl border p-2">
-                 <img 
-                  src={walletImg} 
-                  alt="Wallet Interface" 
-                  className="w-full h-auto rounded-xl object-cover"
-                />
+              <div className="bg-background rounded-2xl border p-6">
+                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                   <ShieldCheck className="w-5 h-5 text-green-600" />
+                   Trust & Safety
+                 </h3>
+                 <div className="space-y-4">
+                   <div className="flex gap-3">
+                     <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                       <Lock className="w-4 h-4" />
+                     </div>
+                     <div>
+                       <div className="font-semibold text-sm">Secure Payments</div>
+                       <div className="text-xs text-muted-foreground">256-bit SSL Encrypted</div>
+                     </div>
+                   </div>
+                   <div className="flex gap-3">
+                     <div className="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                       <UserCheck className="w-4 h-4" />
+                     </div>
+                     <div>
+                       <div className="font-semibold text-sm">Verified Partners</div>
+                       <div className="text-xs text-muted-foreground">100% Background Checked</div>
+                     </div>
+                   </div>
+                   <div className="flex gap-3">
+                     <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                       <Headset className="w-4 h-4" />
+                     </div>
+                     <div>
+                       <div className="font-semibold text-sm">24/7 Support</div>
+                       <div className="text-xs text-muted-foreground">Instant Help Available</div>
+                     </div>
+                   </div>
+                 </div>
               </div>
             </div>
           </div>
