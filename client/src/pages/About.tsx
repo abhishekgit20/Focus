@@ -37,32 +37,32 @@ export default function About() {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary-foreground">
-                  <Mail className="w-5 h-5" />
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 group">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-sm">
+                  <Mail className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Email Us</p>
-                  <p className="text-muted-foreground">support@focusindia.com</p>
+                  <p className="text-sm font-bold text-foreground">Email Us</p>
+                  <p className="text-muted-foreground group-hover:text-primary transition-colors">support@focusindia.com</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary-foreground">
-                  <Phone className="w-5 h-5" />
+              <div className="flex items-center gap-4 group">
+                <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center text-secondary-foreground border border-secondary/30 group-hover:bg-secondary group-hover:text-secondary-foreground transition-all duration-300 shadow-sm">
+                  <Phone className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Call Us</p>
-                  <p className="text-muted-foreground">+91 98765 43210</p>
+                  <p className="text-sm font-bold text-foreground">Call Us</p>
+                  <p className="text-muted-foreground group-hover:text-secondary-foreground transition-colors">+91 98765 43210</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 animate-pulse">
-                  <AlertTriangle className="w-5 h-5" />
+              <div className="flex items-center gap-4 group">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 border border-red-200 group-hover:bg-red-600 group-hover:text-white transition-all duration-300 animate-pulse shadow-sm">
+                  <AlertTriangle className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-red-600">Emergency Crisis Line</p>
-                  <p className="text-muted-foreground">1800-599-0019 (24/7)</p>
+                  <p className="text-sm font-bold text-red-600">Emergency Crisis Line</p>
+                  <p className="text-muted-foreground font-medium">1800-599-0019 (24/7)</p>
                 </div>
               </div>
             </div>
