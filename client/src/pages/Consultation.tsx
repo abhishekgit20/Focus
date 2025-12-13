@@ -236,6 +236,13 @@ export default function Consultation() {
   };
 
   const startSession = () => {
+    // Reset everything for new session
+    setSessionDuration(0);
+    setProfessionalOnline(false);
+    // Generate new session ID
+    const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    sessionIdRef.current = `chat_${professionalId}_${uniqueId}`;
+    
     setIsSessionActive(true);
     connectWebSocket();
     setMessages([{
