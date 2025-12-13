@@ -1,19 +1,35 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, decimal, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_auth_session_expire").on(table.expire)],
+);
+
 // Users table - supports both clients and professionals
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  email: text("email").unique(),
+  password: text("password"),
   role: text("role").notNull().default("client"), // 'client' or 'professional'
-  fullName: text("full_name").notNull(),
+  fullName: text("full_name"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   phone: text("phone"),
   profileImage: text("profile_image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Professional profiles - additional info for therapists
@@ -281,3 +297,6 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
+
+// Upsert user type for Replit Auth
+export type UpsertUser = typeof users.$inferInsert;

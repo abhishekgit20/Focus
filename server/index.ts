@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { setupAuth } from "./auth";
+import { setupAuth } from "./replitAuth";
 import { createServer } from "http";
 
 const app = express();
@@ -22,9 +22,6 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
-
-// Setup authentication
-setupAuth(app);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -64,6 +61,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await setupAuth(app);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -11,6 +11,7 @@ import {
   reviews,
   type User,
   type InsertUser,
+  type UpsertUser,
   type ProfessionalProfile,
   type InsertProfessionalProfile,
   type Wallet,
@@ -32,10 +33,11 @@ import { db } from "./db";
 import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations
+  // User operations (IMPORTANT: upsertUser is mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Professional profile operations
   getProfessionalProfile(userId: string): Promise<ProfessionalProfile | undefined>;
@@ -91,6 +93,25 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          fullName: userData.fullName,
+          profileImage: userData.profileImage,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
     return user;
   }
 

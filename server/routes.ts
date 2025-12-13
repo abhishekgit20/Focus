@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { requireAuth, requireProfessional, requireClient } from "./auth";
-import passport from "passport";
+import { isAuthenticated } from "./replitAuth";
 import bcrypt from "bcryptjs";
 import { generateChatResponse, generateJournalInsights, analyzeMood } from "./ai";
 import {
@@ -16,6 +15,34 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+const requireAuth = isAuthenticated;
+
+const requireClient = async (req: any, res: any, next: any) => {
+  isAuthenticated(req, res, async () => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(userId);
+    if (!user || user.role !== 'client') {
+      return res.status(403).json({ message: "Client access required" });
+    }
+    req.user.dbUser = user;
+    next();
+  });
+};
+
+const requireProfessional = async (req: any, res: any, next: any) => {
+  isAuthenticated(req, res, async () => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(userId);
+    if (!user || user.role !== 'professional') {
+      return res.status(403).json({ message: "Professional access required" });
+    }
+    req.user.dbUser = user;
+    next();
+  });
+};
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -23,32 +50,48 @@ export async function registerRoutes(
   
   // ==================== AUTH ROUTES ====================
   
-  // Register new user
+  // Get current user (for Replit Auth)
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Register new user (for email/password registration)
   app.post("/api/auth/register", async (req, res, next) => {
     try {
-      const data = insertUserSchema.parse(req.body);
+      const { email, password, fullName, role } = req.body;
       
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(data.email);
+      if (!email || !password || !fullName) {
+        return res.status(400).json({ error: "Email, password and full name are required" });
+      }
+      
+      const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
       
-      // Hash password
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const hashedPassword = await bcrypt.hash(password, 10);
       
-      // Create user
       const user = await storage.createUser({
-        ...data,
+        email,
         password: hashedPassword,
+        fullName,
+        role: role || 'client',
       });
       
-      // Create wallet if client
       if (user.role === 'client') {
         await storage.createWallet({ userId: user.id, balance: "0", totalRecharged: "0" });
       }
       
-      // Create professional profile if professional
       if (user.role === 'professional' && req.body.professionalProfile) {
         await storage.createProfessionalProfile({
           ...req.body.professionalProfile,
@@ -56,17 +99,13 @@ export async function registerRoutes(
         });
       }
       
-      // Log the user in
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.json({ 
-          user: { 
-            id: user.id, 
-            email: user.email, 
-            role: user.role,
-            fullName: user.fullName,
-          } 
-        });
+      res.json({ 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          fullName: user.fullName,
+        } 
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -76,51 +115,26 @@ export async function registerRoutes(
     }
   });
   
-  // Login
-  app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: User | false, info: any) => {
-      if (err) return next(err);
+  // Get current user (legacy endpoint)
+  app.get("/api/auth/me", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims?.sub;
+      const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(401).json({ error: info?.message || "Invalid credentials" });
+        return res.status(404).json({ message: "User not found" });
       }
-      
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.json({ 
-          user: { 
-            id: user.id, 
-            email: user.email, 
-            role: user.role,
-            fullName: user.fullName,
-            profileImage: user.profileImage,
-          } 
-        });
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          fullName: user.fullName,
+          profileImage: user.profileImage,
+        }
       });
-    })(req, res, next);
-  });
-  
-  // Logout
-  app.post("/api/auth/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-  
-  // Get current user
-  app.get("/api/auth/me", requireAuth, async (req, res) => {
-    const user = req.user as User;
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        fullName: user.fullName,
-        profileImage: user.profileImage,
-      }
-    });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
   });
   
   // ==================== PROFESSIONAL ROUTES ====================
