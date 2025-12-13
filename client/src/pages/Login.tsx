@@ -12,6 +12,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isProfessional, setIsProfessional] = useState(false);
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +21,10 @@ export default function Login() {
     // Simulate login delay
     setTimeout(() => {
       localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userRole', isProfessional ? 'professional' : 'client');
       window.dispatchEvent(new Event('auth-change'));
       setIsLoading(false);
-      setLocation("/profile");
+      setLocation(isProfessional ? "/professional-dashboard" : "/profile");
     }, 1500);
   };
 
@@ -57,8 +59,25 @@ export default function Login() {
 
           <div className="w-full max-w-[420px] mx-auto space-y-8">
             <div className="text-left space-y-2">
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground tracking-tight">Welcome Back</h1>
-              <p className="text-base text-muted-foreground">Sign in to continue your journey to wellness.</p>
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground tracking-tight">Welcome Back</h1>
+              </div>
+              <p className="text-base text-muted-foreground">Sign in to continue your journey.</p>
+            </div>
+            
+            <div className="bg-muted/30 p-1 rounded-xl flex">
+              <button 
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!isProfessional ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setIsProfessional(false)}
+              >
+                Client Login
+              </button>
+              <button 
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${isProfessional ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setIsProfessional(true)}
+              >
+                Professional Login
+              </button>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">

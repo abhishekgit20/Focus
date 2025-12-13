@@ -16,11 +16,13 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [lang, setLang] = useState("English");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState('client');
 
   useEffect(() => {
     // Check initial state
     const checkAuth = () => {
       setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
+      setUserRole(localStorage.getItem('userRole') || 'client');
     };
     checkAuth();
 
@@ -31,9 +33,10 @@ export function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userRole');
     window.dispatchEvent(new Event('auth-change'));
     // Optional: redirect to home
-    if (window.location.pathname === '/profile') {
+    if (window.location.pathname === '/profile' || window.location.pathname === '/professional-dashboard') {
       window.location.href = '/';
     }
   };
@@ -106,12 +109,20 @@ export function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <Link href="/profile">
-                  <DropdownMenuItem className="cursor-pointer">My Profile</DropdownMenuItem>
-                </Link>
-                <Link href="/wallet">
-                  <DropdownMenuItem className="cursor-pointer">Wallet (₹0.00)</DropdownMenuItem>
-                </Link>
+                {userRole === 'professional' ? (
+                  <Link href="/professional-dashboard">
+                    <DropdownMenuItem className="cursor-pointer">Professional Dashboard</DropdownMenuItem>
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/profile">
+                      <DropdownMenuItem className="cursor-pointer">My Profile</DropdownMenuItem>
+                    </Link>
+                    <Link href="/wallet">
+                      <DropdownMenuItem className="cursor-pointer">Wallet (₹0.00)</DropdownMenuItem>
+                    </Link>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" /> Logout
@@ -149,12 +160,20 @@ export function Navbar() {
           ))}
           {isLoggedIn ? (
             <>
-              <Link href="/profile" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
-                My Profile
-              </Link>
-              <Link href="/wallet" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
-                Wallet (₹0.00)
-              </Link>
+              {userRole === 'professional' ? (
+                <Link href="/professional-dashboard" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link href="/profile" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    My Profile
+                  </Link>
+                  <Link href="/wallet" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    Wallet (₹0.00)
+                  </Link>
+                </>
+              )}
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" 
