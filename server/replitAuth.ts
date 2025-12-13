@@ -57,8 +57,10 @@ async function upsertUser(claims: any) {
     ? `${firstName} ${lastName}`.trim() 
     : firstName || lastName || claims["email"]?.split('@')[0] || "User";
   
+  const userId = claims["sub"];
+  
   await storage.upsertUser({
-    id: claims["sub"],
+    id: userId,
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
@@ -66,6 +68,11 @@ async function upsertUser(claims: any) {
     profileImage: claims["profile_image_url"],
     role: "client",
   });
+  
+  const existingWallet = await storage.getWallet(userId);
+  if (!existingWallet) {
+    await storage.createWallet({ userId, balance: "0", totalRecharged: "0" });
+  }
 }
 
 export async function setupAuth(app: Express) {
