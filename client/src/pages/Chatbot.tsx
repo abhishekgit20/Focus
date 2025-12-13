@@ -35,6 +35,29 @@ export default function Chatbot() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  const detectLanguage = (text: string): { lang: string; code: string } => {
+    const langPatterns = [
+      { pattern: /[\u0900-\u097F]/, lang: 'Hindi', code: 'hi-IN' },
+      { pattern: /[\u0980-\u09FF]/, lang: 'Bengali', code: 'bn-IN' },
+      { pattern: /[\u0A80-\u0AFF]/, lang: 'Gujarati', code: 'gu-IN' },
+      { pattern: /[\u0B00-\u0B7F]/, lang: 'Odia', code: 'or-IN' },
+      { pattern: /[\u0B80-\u0BFF]/, lang: 'Tamil', code: 'ta-IN' },
+      { pattern: /[\u0C00-\u0C7F]/, lang: 'Telugu', code: 'te-IN' },
+      { pattern: /[\u0C80-\u0CFF]/, lang: 'Kannada', code: 'kn-IN' },
+      { pattern: /[\u0D00-\u0D7F]/, lang: 'Malayalam', code: 'ml-IN' },
+      { pattern: /[\u0A00-\u0A7F]/, lang: 'Punjabi', code: 'pa-IN' },
+      { pattern: /[\u0A80-\u0AFF]/, lang: 'Gujarati', code: 'gu-IN' },
+      { pattern: /[\u0900-\u097F][\u0900-\u097F]/, lang: 'Marathi', code: 'mr-IN' },
+    ];
+    
+    for (const { pattern, lang, code } of langPatterns) {
+      if (pattern.test(text)) {
+        return { lang, code };
+      }
+    }
+    return { lang: 'English', code: 'en-IN' };
+  };
+
   const speakText = useCallback((text: string, index: number) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -48,20 +71,21 @@ export default function Chatbot() {
       utterance.rate = 0.9;
       utterance.pitch = 1;
       
-      const hindiPattern = /[\u0900-\u097F]/;
-      const isHindi = hindiPattern.test(text);
-      utterance.lang = isHindi ? 'hi-IN' : 'en-IN';
+      const detected = detectLanguage(text);
+      utterance.lang = detected.code;
       
       const voices = window.speechSynthesis.getVoices();
-      if (isHindi) {
-        const hindiVoice = voices.find(v => v.lang.includes('hi-IN') || v.lang.includes('hi'));
-        if (hindiVoice) {
-          utterance.voice = hindiVoice;
-        }
+      const matchingVoice = voices.find(v => 
+        v.lang.includes(detected.code) || 
+        v.lang.includes(detected.code.split('-')[0])
+      );
+      
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
       } else {
-        const englishVoice = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('en'));
-        if (englishVoice) {
-          utterance.voice = englishVoice;
+        const indianVoice = voices.find(v => v.lang.includes('-IN'));
+        if (indianVoice) {
+          utterance.voice = indianVoice;
         }
       }
 
