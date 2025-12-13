@@ -455,5 +455,24 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== PUBLIC CHAT (NO AUTH REQUIRED) ====================
+  
+  app.post("/api/public-chat", async (req, res, next) => {
+    try {
+      const { message, conversationHistory = [] } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const result = await generateChatResponse(message, conversationHistory);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Public chat error:", error);
+      next(error);
+    }
+  });
+
   return httpServer;
 }

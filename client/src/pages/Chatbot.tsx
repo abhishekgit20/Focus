@@ -88,12 +88,11 @@ export default function Chatbot() {
     setIsTyping(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/public-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           message: userMessage,
           conversationHistory: conversationHistory
