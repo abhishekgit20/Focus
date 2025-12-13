@@ -37,17 +37,15 @@ export default function Chatbot() {
 
   const detectLanguage = (text: string): { lang: string; code: string } => {
     const langPatterns = [
-      { pattern: /[\u0900-\u097F]/, lang: 'Hindi', code: 'hi-IN' },
-      { pattern: /[\u0980-\u09FF]/, lang: 'Bengali', code: 'bn-IN' },
+      { pattern: /[\u0A00-\u0A7F]/, lang: 'Punjabi', code: 'pa-IN' },
       { pattern: /[\u0A80-\u0AFF]/, lang: 'Gujarati', code: 'gu-IN' },
+      { pattern: /[\u0980-\u09FF]/, lang: 'Bengali', code: 'bn-IN' },
       { pattern: /[\u0B00-\u0B7F]/, lang: 'Odia', code: 'or-IN' },
       { pattern: /[\u0B80-\u0BFF]/, lang: 'Tamil', code: 'ta-IN' },
       { pattern: /[\u0C00-\u0C7F]/, lang: 'Telugu', code: 'te-IN' },
       { pattern: /[\u0C80-\u0CFF]/, lang: 'Kannada', code: 'kn-IN' },
       { pattern: /[\u0D00-\u0D7F]/, lang: 'Malayalam', code: 'ml-IN' },
-      { pattern: /[\u0A00-\u0A7F]/, lang: 'Punjabi', code: 'pa-IN' },
-      { pattern: /[\u0A80-\u0AFF]/, lang: 'Gujarati', code: 'gu-IN' },
-      { pattern: /[\u0900-\u097F][\u0900-\u097F]/, lang: 'Marathi', code: 'mr-IN' },
+      { pattern: /[\u0900-\u097F]/, lang: 'Hindi', code: 'hi-IN' },
     ];
     
     for (const { pattern, lang, code } of langPatterns) {
