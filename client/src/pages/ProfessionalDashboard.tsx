@@ -313,10 +313,10 @@ export default function ProfessionalDashboard() {
                   <CardContent>
                     <div className="space-y-3">
                       <Input
-                        placeholder="Enter session ID..."
+                        placeholder="Paste session ID here..."
                         value={sessionIdInput}
                         onChange={(e) => setSessionIdInput(e.target.value)}
-                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                        className="bg-white border-white/30 text-gray-900 placeholder:text-gray-500"
                         data-testid="input-session-id"
                       />
                       <Button 
