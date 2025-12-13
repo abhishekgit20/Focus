@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, Settings, History, Video, Phone, MessageSquare } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
@@ -107,6 +107,8 @@ export default function Profile() {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isAutoRotating, setIsAutoRotating] = useState(true);
   const [userGender, setUserGender] = useState(localStorage.getItem('userGender') || 'male');
+  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -122,6 +124,24 @@ export default function Profile() {
     }, 6000);
     return () => clearInterval(interval);
   }, [isAutoRotating]);
+
+  useEffect(() => {
+    const fetchSessionHistory = async () => {
+      setIsLoadingSessions(true);
+      try {
+        const response = await fetch('/api/sessions', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setSessionHistory(data.sessions || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch session history:', error);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+    fetchSessionHistory();
+  }, []);
 
   const goToPrevFact = () => {
     setIsAutoRotating(false);
@@ -378,9 +398,12 @@ export default function Profile() {
             </Card>
 
             <Tabs defaultValue="mood" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mb-6">
+              <TabsList className="grid w-full grid-cols-3 lg:w-[500px] mb-6">
                 <TabsTrigger value="mood">Mood Tracker</TabsTrigger>
                 <TabsTrigger value="activity">Activity Log</TabsTrigger>
+                <TabsTrigger value="sessions" className="gap-1">
+                  <History className="w-3 h-3" /> Sessions
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="mood" className="space-y-6">
@@ -548,6 +571,97 @@ export default function Profile() {
                         />
                       </AreaChart>
                     </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="sessions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <History className="w-5 h-5" /> Session History
+                    </CardTitle>
+                    <CardDescription>Your past consultations with professionals</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingSessions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : sessionHistory.length === 0 ? (
+                      <div className="text-center py-8">
+                        <History className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                        <p className="text-muted-foreground">No sessions yet</p>
+                        <p className="text-sm text-muted-foreground mt-1">Your consultation history will appear here</p>
+                        <Link href="/therapists">
+                          <Button className="mt-4 rounded-full">Book Your First Session</Button>
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {sessionHistory.map((session, i) => (
+                          <div 
+                            key={session.id || i} 
+                            className="flex items-center justify-between p-4 rounded-xl border bg-muted/20 hover:bg-muted/40 transition-colors"
+                            data-testid={`session-history-item-${i}`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`p-3 rounded-full ${
+                                session.status === 'completed' 
+                                  ? 'bg-green-100 text-green-600' 
+                                  : session.status === 'cancelled'
+                                    ? 'bg-red-100 text-red-600'
+                                    : 'bg-blue-100 text-blue-600'
+                              }`}>
+                                {session.type === 'video' ? <Video className="w-5 h-5" /> :
+                                 session.type === 'audio' ? <Phone className="w-5 h-5" /> :
+                                 <MessageSquare className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold">
+                                  {session.type?.charAt(0).toUpperCase() + session.type?.slice(1)} Session
+                                </h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {session.scheduledAt 
+                                    ? new Date(session.scheduledAt).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })
+                                    : 'Date not available'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge 
+                                variant={session.status === 'completed' ? 'default' : 'outline'}
+                                className={
+                                  session.status === 'completed' 
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                    : session.status === 'cancelled'
+                                      ? 'bg-red-100 text-red-700'
+                                      : ''
+                                }
+                              >
+                                {session.status?.charAt(0).toUpperCase() + session.status?.slice(1)}
+                              </Badge>
+                              {session.durationMinutes && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {session.durationMinutes} mins
+                                </p>
+                              )}
+                              {session.totalCost && (
+                                <p className="text-sm font-medium text-primary">
+                                  ₹{parseFloat(session.totalCost).toFixed(0)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
