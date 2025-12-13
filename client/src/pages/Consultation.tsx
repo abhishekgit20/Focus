@@ -150,6 +150,16 @@ export default function Consultation() {
           setMessages(prev => [...prev, newMessage]);
         } else if (data.type === "user_joined" && data.userRole === "professional") {
           setProfessionalOnline(true);
+          // Replace the waiting message with a connected message
+          setMessages(prev => {
+            const filtered = prev.filter(m => !m.text.includes("Waiting for"));
+            return [...filtered, {
+              id: Date.now().toString(),
+              sender: "professional" as const,
+              text: `Hello! I'm ${professional.name}. Thank you for connecting with me. How can I help you today?`,
+              timestamp: new Date(),
+            }];
+          });
           toast({
             title: "Professional Connected",
             description: `${professional.name} has joined the session.`,
