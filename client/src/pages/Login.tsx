@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageTransition } from "@/components/PageTransition";
-import { Eye, EyeOff, Facebook, Mail, Chrome, ArrowLeft, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Facebook, Mail, Chrome, ArrowLeft, Loader2, Shield } from "lucide-react";
 import heroBg from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
 
 export default function Login() {
@@ -79,6 +79,16 @@ export default function Login() {
                 Professional Login
               </button>
             </div>
+
+            {isProfessional && (
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-900 flex gap-3">
+                <Shield className="w-5 h-5 shrink-0 text-blue-600" />
+                <div>
+                  <p className="font-semibold mb-1">Strict Patient Privacy Policy</p>
+                  <p className="text-xs opacity-90">By logging in, you agree to adhere to HIPAA & DISHA guidelines regarding patient confidentiality and data security.</p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">

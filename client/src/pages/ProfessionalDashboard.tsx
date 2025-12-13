@@ -15,10 +15,13 @@ import {
   TrendingUp, 
   Star,
   Bell,
-  Settings
+  Settings,
+  ShieldCheck,
+  FileText
 } from "lucide-react";
 import { useState } from "react";
 import dashboardImg from "@assets/generated_images/professional_therapist_dashboard_with_analytics_and_appointments.png";
+import complianceBadge from "@assets/generated_images/secure_medical_data_privacy_compliance_shield_badge.png";
 
 export default function ProfessionalDashboard() {
   const [isOnline, setIsOnline] = useState(true);
@@ -78,6 +81,19 @@ export default function ProfessionalDashboard() {
             </nav>
           </div>
           
+          <div className="p-6 border-t bg-blue-50/50">
+            <div className="flex items-center gap-3 mb-3">
+              <img src={complianceBadge} alt="HIPAA Compliant" className="w-10 h-10 object-contain" />
+              <div>
+                <h4 className="text-xs font-bold text-blue-900">Privacy Compliant</h4>
+                <p className="text-[10px] text-blue-700">DISHA & HIPAA Standards</p>
+              </div>
+            </div>
+            <Button variant="link" className="h-auto p-0 text-[10px] text-blue-600 underline">
+              View Data Policy
+            </Button>
+          </div>
+
           <div className="mt-auto p-6 border-t bg-muted/10">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Availability</span>
