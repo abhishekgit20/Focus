@@ -9,6 +9,7 @@ import {
   journalEntries,
   chatMessages,
   reviews,
+  paymentOrders,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -28,6 +29,8 @@ import {
   type InsertChatMessage,
   type Review,
   type InsertReview,
+  type PaymentOrder,
+  type InsertPaymentOrder,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
@@ -77,6 +80,11 @@ export interface IStorage {
   createReview(review: InsertReview): Promise<Review>;
   getProfessionalReviews(professionalId: string): Promise<Review[]>;
   updateProfessionalRating(professionalId: string): Promise<void>;
+  
+  // Payment order operations (for Razorpay security)
+  createPaymentOrder(razorpayOrderId: string, userId: string, amount: string): Promise<PaymentOrder>;
+  getPaymentOrder(razorpayOrderId: string): Promise<PaymentOrder | undefined>;
+  markPaymentOrderCompleted(razorpayOrderId: string, razorpayPaymentId: string): Promise<PaymentOrder | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -360,6 +368,43 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(professionalProfiles.userId, professionalId));
     }
+  }
+
+  // Payment order operations (for Razorpay security)
+  async createPaymentOrder(razorpayOrderId: string, userId: string, amount: string): Promise<PaymentOrder> {
+    const [order] = await db.insert(paymentOrders).values({
+      razorpayOrderId,
+      userId,
+      amount,
+      status: "pending",
+    }).returning();
+    return order;
+  }
+
+  async getPaymentOrder(razorpayOrderId: string): Promise<PaymentOrder | undefined> {
+    const [order] = await db
+      .select()
+      .from(paymentOrders)
+      .where(eq(paymentOrders.razorpayOrderId, razorpayOrderId));
+    return order || undefined;
+  }
+
+  async markPaymentOrderCompleted(razorpayOrderId: string, razorpayPaymentId: string): Promise<PaymentOrder | undefined> {
+    const [updated] = await db
+      .update(paymentOrders)
+      .set({
+        status: "completed",
+        razorpayPaymentId,
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(paymentOrders.razorpayOrderId, razorpayOrderId),
+          eq(paymentOrders.status, "pending")
+        )
+      )
+      .returning();
+    return updated || undefined;
   }
 }
 

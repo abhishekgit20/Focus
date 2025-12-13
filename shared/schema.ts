@@ -67,7 +67,20 @@ export const walletTransactions = pgTable("wallet_transactions", {
   description: text("description").notNull(),
   sessionId: varchar("session_id"), // reference to session if payment
   stripePaymentId: text("stripe_payment_id"),
+  razorpayPaymentId: text("razorpay_payment_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Razorpay payment orders for secure tracking
+export const paymentOrders = pgTable("payment_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  razorpayOrderId: text("razorpay_order_id").notNull().unique(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pending"), // 'pending', 'completed', 'failed'
+  razorpayPaymentId: text("razorpay_payment_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
 });
 
 // Appointments/Sessions
@@ -270,6 +283,12 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   createdAt: true,
 });
 
+export const insertPaymentOrderSchema = createInsertSchema(paymentOrders).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -297,6 +316,9 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
+
+export type InsertPaymentOrder = z.infer<typeof insertPaymentOrderSchema>;
+export type PaymentOrder = typeof paymentOrders.$inferSelect;
 
 // Upsert user type for Replit Auth
 export type UpsertUser = typeof users.$inferInsert;

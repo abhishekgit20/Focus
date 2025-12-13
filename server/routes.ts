@@ -336,6 +336,8 @@ export async function registerRoutes(
         },
       });
 
+      await storage.createPaymentOrder(order.id, userId, amount.toString());
+
       res.json({
         orderId: order.id,
         amount: order.amount,
@@ -352,11 +354,24 @@ export async function registerRoutes(
   app.post("/api/wallet/razorpay-verify", requireClient, async (req, res, next) => {
     try {
       const user = req.user as any;
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
       const userId = user.dbUser?.id || user.claims?.sub;
 
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         return res.status(400).json({ error: "Missing payment details" });
+      }
+
+      const paymentOrder = await storage.getPaymentOrder(razorpay_order_id);
+      if (!paymentOrder) {
+        return res.status(400).json({ error: "Order not found" });
+      }
+
+      if (paymentOrder.userId !== userId) {
+        return res.status(403).json({ error: "Order does not belong to this user" });
+      }
+
+      if (paymentOrder.status === "completed") {
+        return res.status(400).json({ error: "Payment already processed" });
       }
 
       const isValid = verifyPaymentSignature(
@@ -369,12 +384,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid payment signature" });
       }
 
+      const completedOrder = await storage.markPaymentOrderCompleted(razorpay_order_id, razorpay_payment_id);
+      if (!completedOrder) {
+        return res.status(400).json({ error: "Failed to process payment - may already be completed" });
+      }
+
       const wallet = await storage.getWallet(userId);
       if (!wallet) {
         return res.status(404).json({ error: "Wallet not found" });
       }
 
-      const rechargeAmount = parseFloat(amount);
+      const rechargeAmount = parseFloat(paymentOrder.amount);
       const newBalance = (parseFloat(wallet.balance) + rechargeAmount).toFixed(2);
       const updatedWallet = await storage.updateWalletBalance(wallet.id, newBalance);
 
@@ -383,6 +403,7 @@ export async function registerRoutes(
         type: "recharge",
         amount: rechargeAmount.toString(),
         description: `UPI wallet recharge of ₹${rechargeAmount} (Payment ID: ${razorpay_payment_id})`,
+        razorpayPaymentId: razorpay_payment_id,
       });
 
       res.json({ success: true, wallet: updatedWallet });
