@@ -167,7 +167,7 @@ export default function ProfessionalChat() {
   };
 
   const sendMessage = () => {
-    if (!inputMessage.trim() || !user) return;
+    if (!inputMessage.trim()) return;
     
     const professionalMessage: Message = {
       id: Date.now().toString(),
@@ -182,7 +182,7 @@ export default function ProfessionalChat() {
       wsRef.current.send(JSON.stringify({
         type: "message",
         sessionId: sessionId,
-        userId: user.id.toString(),
+        userId: user?.id?.toString() || "pro_guest",
         userRole: "professional",
         content: inputMessage,
       }));
