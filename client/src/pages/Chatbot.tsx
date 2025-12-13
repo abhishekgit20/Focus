@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
-import { Send, User, Sparkles, Loader2 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Send, User, Sparkles, Loader2, Volume2, VolumeX } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 interface Message {
   role: string;
@@ -31,7 +31,46 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const speakText = useCallback((text: string, index: number) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      
+      if (speakingIndex === index) {
+        setSpeakingIndex(null);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.lang = 'en-IN';
+      
+      const voices = window.speechSynthesis.getVoices();
+      const indianVoice = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('hi-IN'));
+      if (indianVoice) {
+        utterance.voice = indianVoice;
+      }
+
+      utterance.onend = () => setSpeakingIndex(null);
+      utterance.onerror = () => setSpeakingIndex(null);
+      
+      speechSynthRef.current = utterance;
+      setSpeakingIndex(index);
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [speakingIndex]);
+
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -147,8 +186,22 @@ export default function Chatbot() {
                       </p>
                     )}
                     {msg.role === 'bot' && (
-                      <div className="mt-3 pt-3 border-t border-muted/50 text-xs text-muted-foreground italic flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> {msg.source}
+                      <div className="mt-3 pt-3 border-t border-muted/50 text-xs text-muted-foreground italic flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> {msg.source}
+                        </span>
+                        <button
+                          onClick={() => speakText(msg.text, i)}
+                          className={`p-1.5 rounded-full transition-all ${
+                            speakingIndex === i 
+                              ? 'bg-primary text-white' 
+                              : 'hover:bg-primary/10 text-primary'
+                          }`}
+                          title={speakingIndex === i ? "Stop reading" : "Read aloud"}
+                          data-testid={`button-speak-${i}`}
+                        >
+                          {speakingIndex === i ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        </button>
                       </div>
                     )}
                   </div>
