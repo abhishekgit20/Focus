@@ -111,13 +111,13 @@ export default function Consultation() {
     },
   });
   
-  // Generate stable session ID when user loads - based on user, professional, and date
+  // Generate stable session ID - based on professional and timestamp
   useEffect(() => {
-    if (user && !sessionIdRef.current) {
-      const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      sessionIdRef.current = `session_${professionalId}_${user.id}_${date}`;
+    if (!sessionIdRef.current) {
+      const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+      sessionIdRef.current = `chat_${professionalId}_${uniqueId}`;
     }
-  }, [user, professionalId]);
+  }, [professionalId]);
   
   const totalCost = ((sessionDuration / 60) * professional.ratePerMinute).toFixed(2);
   
