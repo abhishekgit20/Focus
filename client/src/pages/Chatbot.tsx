@@ -47,12 +47,22 @@ export default function Chatbot() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9;
       utterance.pitch = 1;
-      utterance.lang = 'en-IN';
+      
+      const hindiPattern = /[\u0900-\u097F]/;
+      const isHindi = hindiPattern.test(text);
+      utterance.lang = isHindi ? 'hi-IN' : 'en-IN';
       
       const voices = window.speechSynthesis.getVoices();
-      const indianVoice = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('hi-IN'));
-      if (indianVoice) {
-        utterance.voice = indianVoice;
+      if (isHindi) {
+        const hindiVoice = voices.find(v => v.lang.includes('hi-IN') || v.lang.includes('hi'));
+        if (hindiVoice) {
+          utterance.voice = hindiVoice;
+        }
+      } else {
+        const englishVoice = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('en'));
+        if (englishVoice) {
+          utterance.voice = englishVoice;
+        }
       }
 
       utterance.onend = () => setSpeakingIndex(null);
