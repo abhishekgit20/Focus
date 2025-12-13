@@ -162,7 +162,7 @@ export default function Consultation() {
           });
           toast({
             title: "Professional Connected",
-            description: `${professional.name} has joined the session.`,
+            description: `${professional.name} is now online. Billing started at ₹${professional.ratePerMinute}/min.`,
           });
         } else if (data.type === "user_left" && data.userRole === "professional") {
           setProfessionalOnline(false);
@@ -207,7 +207,7 @@ export default function Consultation() {
   }, []);
 
   useEffect(() => {
-    if (isSessionActive) {
+    if (isSessionActive && professionalOnline) {
       timerRef.current = setInterval(() => {
         setSessionDuration(prev => prev + 1);
       }, 1000);
@@ -221,7 +221,7 @@ export default function Consultation() {
         clearInterval(timerRef.current);
       }
     };
-  }, [isSessionActive]);
+  }, [isSessionActive, professionalOnline]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -253,7 +253,7 @@ export default function Consultation() {
     }]);
     toast({
       title: "Session Started",
-      description: `You're now connected. Waiting for ${professional.name} to join. Billing starts at ₹${professional.ratePerMinute}/min.`,
+      description: `Waiting for ${professional.name} to join. Timer starts when they connect.`,
     });
   };
 
