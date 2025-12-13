@@ -15,17 +15,28 @@ import {
   Clock, 
   IndianRupee,
   ArrowLeft,
-  Star
+  Star,
+  Copy,
+  Check
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface Message {
   id: string;
   sender: "user" | "professional";
   text: string;
   timestamp: Date;
+}
+
+interface WSIncoming {
+  type: "message" | "user_joined" | "user_left" | "typing";
+  userId: string;
+  userRole: "client" | "professional";
+  content?: string;
+  timestamp: string;
 }
 
 const DEMO_PROFESSIONALS: Record<string, {
@@ -81,11 +92,100 @@ export default function Consultation() {
   const [inputMessage, setInputMessage] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(sessionType === "video");
+  const [isConnected, setIsConnected] = useState(false);
+  const [professionalOnline, setProfessionalOnline] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const sessionIdRef = useRef<string>("");
+  
+  // Get current user
+  const { data: user } = useQuery<{ id: number; username: string }>({
+    queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/user", { credentials: "include" });
+      if (!res.ok) throw new Error("Not logged in");
+      return res.json();
+    },
+  });
+  
+  // Generate stable session ID when user loads - based on user, professional, and date
+  useEffect(() => {
+    if (user && !sessionIdRef.current) {
+      const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      sessionIdRef.current = `session_${professionalId}_${user.id}_${date}`;
+    }
+  }, [user, professionalId]);
   
   const totalCost = ((sessionDuration / 60) * professional.ratePerMinute).toFixed(2);
+  
+  // WebSocket connection handler
+  const connectWebSocket = useCallback(() => {
+    if (!user) return;
+    
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${sessionIdRef.current}&userId=${user.id}&role=client`;
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+    
+    ws.onopen = () => {
+      setIsConnected(true);
+      console.log("WebSocket connected");
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data: WSIncoming = JSON.parse(event.data);
+        
+        if (data.type === "message" && data.userRole === "professional") {
+          const newMessage: Message = {
+            id: Date.now().toString(),
+            sender: "professional",
+            text: data.content || "",
+            timestamp: new Date(data.timestamp),
+          };
+          setMessages(prev => [...prev, newMessage]);
+        } else if (data.type === "user_joined" && data.userRole === "professional") {
+          setProfessionalOnline(true);
+          toast({
+            title: "Professional Connected",
+            description: `${professional.name} has joined the session.`,
+          });
+        } else if (data.type === "user_left" && data.userRole === "professional") {
+          setProfessionalOnline(false);
+          toast({
+            title: "Professional Disconnected",
+            description: `${professional.name} has left the session.`,
+          });
+        }
+      } catch (error) {
+        console.error("WebSocket message parse error:", error);
+      }
+    };
+    
+    ws.onclose = () => {
+      setIsConnected(false);
+      console.log("WebSocket disconnected");
+    };
+    
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+    
+    return ws;
+  }, [user, professional.name, toast]);
+  
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isSessionActive) {
@@ -118,20 +218,24 @@ export default function Consultation() {
 
   const startSession = () => {
     setIsSessionActive(true);
+    connectWebSocket();
     setMessages([{
       id: "1",
       sender: "professional",
-      text: `Hello! I'm ${professional.name}. Thank you for connecting with me. How can I help you today?`,
+      text: `Waiting for ${professional.name} to connect...`,
       timestamp: new Date(),
     }]);
     toast({
       title: "Session Started",
-      description: `You're now connected with ${professional.name}. Billing has started at ₹${professional.ratePerMinute}/min.`,
+      description: `You're now connected. Waiting for ${professional.name} to join. Billing starts at ₹${professional.ratePerMinute}/min.`,
     });
   };
 
   const endSession = () => {
     setIsSessionActive(false);
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
     toast({
       title: "Session Ended",
       description: `Total duration: ${formatTime(sessionDuration)}. Total cost: ₹${totalCost}`,
@@ -139,7 +243,7 @@ export default function Consultation() {
   };
 
   const sendMessage = () => {
-    if (!inputMessage.trim() || !isSessionActive) return;
+    if (!inputMessage.trim() || !isSessionActive || !user) return;
     
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -149,26 +253,19 @@ export default function Consultation() {
     };
     
     setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
     
-    setTimeout(() => {
-      const responses = [
-        "I understand how you're feeling. Can you tell me more about what's been on your mind?",
-        "That's a very important observation. How long have you been experiencing this?",
-        "Thank you for sharing that with me. It takes courage to open up.",
-        "I hear you. Let's explore this together. What do you think triggered these feelings?",
-        "That's completely valid. Many people experience similar challenges.",
-      ];
-      
-      const professionalMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: "professional",
-        text: responses[Math.floor(Math.random() * responses.length)],
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, professionalMessage]);
-    }, 1500);
+    // Send via WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: "message",
+        sessionId: sessionIdRef.current,
+        userId: user.id.toString(),
+        userRole: "client",
+        content: inputMessage,
+      }));
+    }
+    
+    setInputMessage("");
   };
 
   return (
@@ -200,7 +297,25 @@ export default function Consultation() {
             </div>
             
             {isSessionActive && (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap justify-end">
+                <button 
+                  className="flex items-center gap-2 bg-blue-500/20 px-3 py-1.5 rounded-full cursor-pointer hover:bg-blue-500/30 transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(sessionIdRef.current);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    toast({
+                      title: "Session ID Copied",
+                      description: "Share this with your professional to let them join.",
+                    });
+                  }}
+                  data-testid="button-copy-session-id"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span className="font-mono text-xs" data-testid="text-session-id">
+                    {sessionIdRef.current.slice(0, 20)}...
+                  </span>
+                </button>
                 <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
                   <Clock className="w-4 h-4" />
                   <span className="font-mono text-sm" data-testid="text-session-duration">{formatTime(sessionDuration)}</span>

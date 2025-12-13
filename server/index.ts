@@ -6,9 +6,110 @@ import { createServer } from "http";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { WebSocketServer, WebSocket } from "ws";
+import { parse } from "url";
 
 const app = express();
 const httpServer = createServer(app);
+
+// WebSocket Server for real-time chat
+const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+
+interface ChatRoom {
+  clients: Map<string, { ws: WebSocket; role: "client" | "professional"; userId: string }>;
+}
+
+const chatRooms = new Map<string, ChatRoom>();
+
+interface WSMessage {
+  type: "join" | "message" | "leave" | "typing";
+  sessionId: string;
+  userId: string;
+  userRole: "client" | "professional";
+  content?: string;
+  timestamp?: string;
+}
+
+wss.on("connection", (ws, req) => {
+  const { query } = parse(req.url || "", true);
+  const sessionId = query.sessionId as string;
+  const userId = query.userId as string;
+  const userRole = query.role as "client" | "professional";
+
+  if (!sessionId || !userId || !userRole) {
+    ws.close(1008, "Missing required parameters");
+    return;
+  }
+
+  // Create or join room
+  if (!chatRooms.has(sessionId)) {
+    chatRooms.set(sessionId, { clients: new Map() });
+  }
+
+  const room = chatRooms.get(sessionId)!;
+  room.clients.set(userId, { ws, role: userRole, userId });
+
+  log(`User ${userId} (${userRole}) joined session ${sessionId}`, "websocket");
+
+  // Notify other participants
+  room.clients.forEach((client, id) => {
+    if (id !== userId && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(JSON.stringify({
+        type: "user_joined",
+        userId,
+        userRole,
+        timestamp: new Date().toISOString(),
+      }));
+    }
+  });
+
+  ws.on("message", (data) => {
+    try {
+      const message: WSMessage = JSON.parse(data.toString());
+      
+      // Broadcast to all clients in the room
+      room.clients.forEach((client, id) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(JSON.stringify({
+            type: message.type,
+            userId: message.userId,
+            userRole: message.userRole,
+            content: message.content,
+            timestamp: new Date().toISOString(),
+          }));
+        }
+      });
+    } catch (error) {
+      log(`WebSocket message error: ${error}`, "websocket");
+    }
+  });
+
+  ws.on("close", () => {
+    room.clients.delete(userId);
+    log(`User ${userId} left session ${sessionId}`, "websocket");
+
+    // Notify remaining participants
+    room.clients.forEach((client) => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify({
+          type: "user_left",
+          userId,
+          userRole,
+          timestamp: new Date().toISOString(),
+        }));
+      }
+    });
+
+    // Cleanup empty rooms
+    if (room.clients.size === 0) {
+      chatRooms.delete(sessionId);
+    }
+  });
+
+  ws.on("error", (error) => {
+    log(`WebSocket error for user ${userId}: ${error}`, "websocket");
+  });
+});
 
 declare module "http" {
   interface IncomingMessage {

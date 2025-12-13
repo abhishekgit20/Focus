@@ -37,6 +37,7 @@ import PartnerWithUs from "@/pages/PartnerWithUs";
 import WalletPage from "@/pages/Wallet";
 import ProfessionalDashboard from "@/pages/ProfessionalDashboard";
 import Consultation from "@/pages/Consultation";
+import ProfessionalChat from "@/pages/ProfessionalChat";
 import NotFound from "@/pages/not-found";
 
 function PageLoader() {
@@ -68,6 +69,7 @@ function Router() {
           <Route path="/professional-dashboard" component={ProfessionalDashboard} />
           <Route path="/formula-guide" component={FormulaGuide} />
           <Route path="/consultation/:professionalId/:type" component={Consultation} />
+          <Route path="/professional-chat/:sessionId" component={ProfessionalChat} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -79,7 +81,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [location] = useLocation();
   
-  const isFullscreenPage = location.startsWith("/consultation");
+  const isFullscreenPage = location.startsWith("/consultation") || location.startsWith("/professional-chat");
 
   useEffect(() => {
     // Preload critical images for Services and Home page

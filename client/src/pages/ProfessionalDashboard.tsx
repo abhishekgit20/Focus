@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -17,10 +18,12 @@ import {
   Bell,
   Settings,
   ShieldCheck,
-  Loader2
+  Loader2,
+  Phone
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import dashboardImg from "@assets/generated_images/professional_therapist_dashboard_with_analytics_and_appointments.png";
 import complianceBadge from "@assets/generated_images/secure_medical_data_privacy_compliance_shield_badge.png";
 
@@ -54,6 +57,8 @@ interface SessionData {
 
 export default function ProfessionalDashboard() {
   const [isOnline, setIsOnline] = useState(true);
+  const [sessionIdInput, setSessionIdInput] = useState("");
+  const [, setLocation] = useLocation();
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/professional/stats'],
@@ -298,6 +303,39 @@ export default function ProfessionalDashboard() {
               </div>
 
               <div className="space-y-6">
+                <Card className="border-none shadow-sm bg-green-600 text-white">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Phone className="w-5 h-5" /> Join Client Session
+                    </CardTitle>
+                    <CardDescription className="text-white/80">Enter session ID to join a chat</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="Enter session ID..."
+                        value={sessionIdInput}
+                        onChange={(e) => setSessionIdInput(e.target.value)}
+                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                        data-testid="input-session-id"
+                      />
+                      <Button 
+                        variant="secondary" 
+                        className="w-full font-bold"
+                        onClick={() => {
+                          if (sessionIdInput.trim()) {
+                            setLocation(`/professional-chat/${sessionIdInput.trim()}`);
+                          }
+                        }}
+                        disabled={!sessionIdInput.trim()}
+                        data-testid="button-join-session"
+                      >
+                        Join Session
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="border-none shadow-sm bg-primary text-primary-foreground">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
