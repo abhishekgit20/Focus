@@ -103,7 +103,7 @@ export function Navbar() {
                 <Button variant="ghost" size="icon" className="rounded-full w-9 h-9">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
                     <img 
-                      src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60" 
+                      src={userRole === 'professional' ? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200" : "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"}
                       alt="Profile" 
                       className="w-full h-full object-cover"
                     />
