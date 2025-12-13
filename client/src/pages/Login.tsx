@@ -46,10 +46,10 @@ export default function Login() {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="flex flex-col justify-start lg:justify-center p-8 bg-background relative min-h-screen lg:min-h-0 pt-32 lg:pt-8">
-          <div className="absolute top-8 left-8 z-10">
+        <div className="flex flex-col justify-center p-8 bg-background relative min-h-screen lg:min-h-0 pt-24 lg:pt-8">
+          <div className="lg:absolute lg:top-8 lg:left-8 mb-8 lg:mb-0">
             <Link href="/">
-              <Button variant="ghost" className="gap-2 hover:bg-muted/50 rounded-full">
+              <Button variant="ghost" className="gap-2 hover:bg-muted/50 rounded-full pl-0 lg:pl-4">
                 <ArrowLeft className="w-4 h-4" /> Back to Home
               </Button>
             </Link>
