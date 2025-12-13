@@ -8,7 +8,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { Eye, EyeOff, Facebook, Mail, Chrome, ArrowLeft, Loader2, Shield } from "lucide-react";
 import { login } from "@/lib/api";
 import { toast } from "sonner";
-import heroBg from "@assets/generated_images/serene_meditation_garden_scene.png";
+import heroBg from "@assets/generated_images/therapist_and_client_session.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();
