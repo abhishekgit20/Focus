@@ -141,7 +141,7 @@ export default function Home() {
                   </Button>
                 </Link>
                 <Link href="/chatbot">
-                  <Button size="lg" variant="outline" className="rounded-full text-lg px-8 py-6 border-2 border-white/50 text-white bg-white/10 backdrop-blur-md hover:bg-white/20 hover:text-white hover:border-white transition-all">
+                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none">
                     Chat with Gita Bot
                   </Button>
                 </Link>
