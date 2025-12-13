@@ -108,7 +108,7 @@ export default function PartnerWithUs() {
               <div id="register-form" className="bg-background border rounded-3xl p-8 shadow-xl">
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold mb-2">Professional Registration</h2>
-                  <p className="text-muted-foreground">Complete your profile to join the Focus network. All fields marked with * are mandatory.</p>
+                  <p className="text-muted-foreground">Complete your profile to join the Focus network. All fields marked with <span className="text-red-500">*</span> are mandatory.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
@@ -120,21 +120,21 @@ export default function PartnerWithUs() {
                     </h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name *</Label>
+                        <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
                         <Input id="firstName" placeholder="Dr. / Mr. / Ms." required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
                         <Input id="lastName" placeholder="Surname" required />
                       </div>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email Address *</Label>
+                        <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
                         <Input id="email" type="email" placeholder="doctor@example.com" required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Mobile Number *</Label>
+                        <Label htmlFor="phone">Mobile Number <span className="text-red-500">*</span></Label>
                         <Input id="phone" type="tel" placeholder="+91 98765 43210" required />
                       </div>
                     </div>
@@ -148,7 +148,7 @@ export default function PartnerWithUs() {
                     </h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="role">Profession *</Label>
+                        <Label htmlFor="role">Profession <span className="text-red-500">*</span></Label>
                         <Select required>
                           <SelectTrigger>
                             <SelectValue placeholder="Select your role" />
@@ -163,7 +163,7 @@ export default function PartnerWithUs() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="experience">Years of Experience *</Label>
+                        <Label htmlFor="experience">Years of Experience <span className="text-red-500">*</span></Label>
                         <Select required>
                           <SelectTrigger>
                             <SelectValue placeholder="Select experience" />
@@ -179,7 +179,7 @@ export default function PartnerWithUs() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="license">Medical Registration / License Number *</Label>
+                      <Label htmlFor="license">Medical Registration / License Number <span className="text-red-500">*</span></Label>
                       <Input id="license" placeholder="e.g., MCI-12345" required />
                       <p className="text-xs text-muted-foreground">This will be verified against the national registry.</p>
                     </div>
