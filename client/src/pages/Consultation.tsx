@@ -166,9 +166,14 @@ export default function Consultation() {
           });
         } else if (data.type === "user_left" && data.userRole === "professional") {
           setProfessionalOnline(false);
+          setIsSessionActive(false); // End the session and stop timer
+          if (wsRef.current) {
+            wsRef.current.close();
+          }
           toast({
-            title: "Professional Disconnected",
-            description: `${professional.name} has left the session.`,
+            title: "Session Ended",
+            description: `${professional.name} has ended the session.`,
+            variant: "destructive",
           });
         }
       } catch (error) {
