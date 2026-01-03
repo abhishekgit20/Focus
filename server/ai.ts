@@ -1,10 +1,9 @@
-// AI service using OpenAI from blueprint:javascript_openai_ai_integrations
+// AI service using OpenAI
 import OpenAI from "openai";
 
-// This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
+// Initialize OpenAI client with API key from environment variables
 const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Bhagavad Gita wisdom verses for mental health support
@@ -41,9 +40,9 @@ export async function generateChatResponse(
     ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+      model: process.env.OPENAI_MODEL || "gpt-4o", // Use OPENAI_MODEL env var or default to gpt-4o
       messages,
-      max_completion_tokens: 8192,
+      max_tokens: 8192,
     });
 
     const response = completion.choices[0]?.message?.content || "I apologize, but I'm having trouble processing your message right now. Please try again.";
@@ -86,7 +85,7 @@ Keep the response warm, supportive, and concise (2-3 short paragraphs).`;
         { role: 'system', content: bhagavadGitaContext },
         { role: 'user', content: prompt }
       ],
-      max_completion_tokens: 8192,
+      max_tokens: 8192,
     });
 
     return completion.choices[0]?.message?.content || "Thank you for sharing your thoughts. Journaling is a powerful tool for self-reflection and growth.";

@@ -3,23 +3,32 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import type { Express } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
 import type { User } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
-const MemoryStore = createMemoryStore(session);
+const pgStore = connectPg(session);
 
 export function setupAuth(app: Express) {
+  const sessionTtl = 30 * 24 * 60 * 60 * 1000; // 30 days
+  const sessionStore = new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true,
+    ttl: sessionTtl,
+    tableName: "auth_sessions",
+  });
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "focus-mental-health-secret-key-change-in-production",
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: sessionTtl,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
   };
 
   app.use(session(sessionSettings));
@@ -37,7 +46,7 @@ export function setupAuth(app: Express) {
         try {
           const user = await storage.getUserByEmail(email);
           
-          if (!user) {
+          if (!user || !user.password) {
             return done(null, false, { message: "Invalid email or password" });
           }
 
@@ -76,6 +85,9 @@ export function requireAuth(req: any, res: any, next: any) {
   }
   res.status(401).json({ error: "Unauthorized - Please log in" });
 }
+
+// Alias for compatibility with existing code
+export const isAuthenticated = requireAuth;
 
 // Middleware to check if user has professional role
 export function requireProfessional(req: any, res: any, next: any) {

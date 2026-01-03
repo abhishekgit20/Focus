@@ -1,10 +1,11 @@
+// Load environment variables from .env file
+import "dotenv/config";
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { setupAuth } from "./replitAuth";
+import { setupAuth } from "./auth";
 import { createServer } from "http";
-import { runMigrations } from 'stripe-replit-sync';
-import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { WebSocketServer, WebSocket } from "ws";
 import { parse } from "url";
@@ -120,47 +121,34 @@ declare module "http" {
 }
 
 async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.log('DATABASE_URL not found, skipping Stripe initialization');
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    console.log('STRIPE_SECRET_KEY not found, Stripe features will be disabled');
     return;
   }
 
   try {
-    console.log('Initializing Stripe schema...');
-    await runMigrations({ databaseUrl });
-    console.log('Stripe schema ready');
-
-    const stripeSync = await getStripeSync();
-
-    console.log('Setting up managed webhook...');
-    const domains = process.env.REPLIT_DOMAINS;
-    const webhookBaseUrl = domains ? `https://${domains.split(',')[0]}` : 'http://localhost:5000';
-    const { webhook, uuid } = await stripeSync.findOrCreateManagedWebhook(
-      `${webhookBaseUrl}/api/stripe/webhook`,
-      {
-        enabled_events: ['*'],
-        description: 'Managed webhook for Focus platform',
-      }
-    );
-    console.log(`Webhook configured: ${webhook.url} (UUID: ${uuid})`);
-
-    console.log('Syncing Stripe data...');
-    stripeSync.syncBackfill()
-      .then(() => console.log('Stripe data synced'))
-      .catch((err: any) => console.error('Error syncing Stripe data:', err));
+    console.log('Stripe initialized (webhook endpoint: /api/stripe/webhook)');
+    console.log('Note: Configure your Stripe webhook endpoint in the Stripe Dashboard');
+    console.log('Webhook secret should be set in STRIPE_WEBHOOK_SECRET environment variable');
   } catch (error) {
     console.error('Failed to initialize Stripe:', error);
   }
 }
 
 app.post(
-  '/api/stripe/webhook/:uuid',
+  '/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
     const signature = req.headers['stripe-signature'];
     if (!signature) {
       return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error('STRIPE_WEBHOOK_SECRET not configured');
+      return res.status(500).json({ error: 'Webhook secret not configured' });
     }
 
     try {
@@ -170,8 +158,7 @@ app.post(
         return res.status(500).json({ error: 'Webhook processing error' });
       }
 
-      const { uuid } = req.params;
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig, uuid);
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig, webhookSecret);
       res.status(200).json({ received: true });
     } catch (error: any) {
       console.error('Webhook error:', error.message);
@@ -228,6 +215,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Trust proxy for correct IP and protocol detection behind reverse proxies
+  app.set("trust proxy", 1);
+  
   await initStripe();
   await setupAuth(app);
   await registerRoutes(httpServer, app);
@@ -250,19 +240,15 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Serve the app on the port specified in the environment variable PORT
+  // Default to 5000 if not specified
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  httpServer.listen(port, "0.0.0.0", () => {
+    log(`Server running on port ${port}`);
+    if (process.env.NODE_ENV === "production") {
+      log("Production mode - serving static files");
+    } else {
+      log("Development mode - using Vite middleware");
+    }
+  });
 })();

@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { isAuthenticated } from "./replitAuth";
-import bcrypt from "bcryptjs";
+import { requireAuth, requireClient, requireProfessional } from "./auth";
+import passport from "passport";
 import { generateChatResponse, generateJournalInsights, analyzeMood } from "./ai";
 import {
   insertUserSchema,
@@ -17,34 +17,6 @@ import { z } from "zod";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { getRazorpayClient, getRazorpayKeyId, verifyPaymentSignature } from "./razorpayClient";
 
-const requireAuth = isAuthenticated;
-
-const requireClient = async (req: any, res: any, next: any) => {
-  isAuthenticated(req, res, async () => {
-    const userId = req.user?.claims?.sub;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    const user = await storage.getUser(userId);
-    if (!user || user.role !== 'client') {
-      return res.status(403).json({ message: "Client access required" });
-    }
-    req.user.dbUser = user;
-    next();
-  });
-};
-
-const requireProfessional = async (req: any, res: any, next: any) => {
-  isAuthenticated(req, res, async () => {
-    const userId = req.user?.claims?.sub;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    const user = await storage.getUser(userId);
-    if (!user || user.role !== 'professional') {
-      return res.status(403).json({ message: "Professional access required" });
-    }
-    req.user.dbUser = user;
-    next();
-  });
-};
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -52,11 +24,10 @@ export async function registerRoutes(
   
   // ==================== AUTH ROUTES ====================
   
-  // Get current user (for Replit Auth)
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Get current user
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const user = req.user as User;
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -118,60 +89,50 @@ export async function registerRoutes(
   });
 
   // Login user (for email/password login)
-  app.post("/api/auth/login", async (req, res, next) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+  app.post("/api/auth/login", (req, res, next) => {
+    passport.authenticate('local', (err: any, user: User | false, info: any) => {
+      if (err) {
+        return next(err);
       }
-      
-      const user = await storage.getUserByEmail(email);
-      if (!user || !user.password) {
-        return res.status(401).json({ error: "Invalid email or password" });
+      if (!user) {
+        return res.status(401).json({ error: info?.message || "Invalid email or password" });
       }
-      
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ error: "Invalid email or password" });
-      }
-      
-      // Set user in session
-      (req.session as any).userId = user.id;
-      (req.session as any).user = {
-        claims: { sub: user.id },
-        dbUser: user,
-      };
-      
-      res.json({ 
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          role: user.role,
-          fullName: user.fullName,
-          profileImage: user.profileImage,
-        } 
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({ 
+          user: { 
+            id: user.id, 
+            email: user.email, 
+            role: user.role,
+            fullName: user.fullName,
+            profileImage: user.profileImage,
+          } 
+        });
       });
-    } catch (error) {
-      next(error);
-    }
+    })(req, res, next);
   });
 
   // Logout user
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
+  app.post("/api/auth/logout", (req, res, next) => {
+    req.logout((err) => {
       if (err) {
-        return res.status(500).json({ error: "Failed to logout" });
+        return next(err);
       }
-      res.json({ message: "Logged out successfully" });
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ error: "Failed to logout" });
+        }
+        res.json({ message: "Logged out successfully" });
+      });
     });
   });
   
   // Get current user (legacy endpoint)
   app.get("/api/auth/me", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims?.sub;
-      const user = await storage.getUser(userId);
+      const user = req.user as User;
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -284,8 +245,7 @@ export async function registerRoutes(
       }
 
       const stripe = await getUncachableStripeClient();
-      const domains = process.env.REPLIT_DOMAINS;
-      const baseUrl = domains ? `https://${domains.split(',')[0]}` : `${req.protocol}://${req.get('host')}`;
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
