@@ -13,6 +13,7 @@ vite.config.ts.*
 # Replit files (if any remain)
 .replit
 replit.nix
+.local/
 
 # IDE
 .vscode
