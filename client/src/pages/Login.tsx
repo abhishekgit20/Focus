@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,32 @@ import { PageTransition } from "@/components/PageTransition";
 import { Eye, EyeOff, Facebook, Mail, Chrome, ArrowLeft, Loader2, Shield } from "lucide-react";
 import { login } from "@/lib/api";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import heroBg from "@assets/generated_images/therapist_and_client_session.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isProfessional, setIsProfessional] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Check for OAuth errors in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error === 'google_not_configured') {
+      toast.error("Google login is not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.");
+    } else if (error === 'google_auth_failed') {
+      toast.error("Google authentication failed. Please try again or use email and password.");
+    }
+    // Clean up URL
+    if (error) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,20 +47,28 @@ export default function Login() {
       localStorage.setItem('userRole', response.user.role);
       localStorage.setItem('userName', response.user.fullName);
       localStorage.setItem('userEmail', response.user.email);
-      if (response.user.gender) {
-        localStorage.setItem('userGender', response.user.gender);
-      } else {
-        localStorage.removeItem('userGender');
-      }
       window.dispatchEvent(new Event('auth-change'));
+      
+      // Invalidate auth query to refetch user data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast.success(`Welcome back, ${response.user.fullName}!`);
       
-      // Redirect based on role
-      setLocation(response.user.role === 'professional' ? "/professional-dashboard" : "/profile");
+      // Use window.location.href for a full page reload to ensure session is properly established
+      // This prevents race conditions where Profile page checks auth before session is ready
+      let redirectPath = "/profile";
+      if (response.user.role === 'admin') {
+        redirectPath = "/admin/feedback";
+      } else if (response.user.role === 'professional') {
+        redirectPath = "/professional-dashboard";
+      }
+      
+      // Small delay to ensure toast is visible and session cookie is set
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 500);
     } catch (error: any) {
       toast.error(error.message || "Login failed. Please check your credentials.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -185,7 +210,10 @@ export default function Login() {
               <Button 
                 variant="outline" 
                 className="h-12 px-0 rounded-xl border-muted-foreground/20 hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/40 transition-all gap-2 text-sm font-medium text-muted-foreground"
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => {
+                  // Redirect to Google OAuth - server will handle configuration check
+                  window.location.href = "/api/auth/google";
+                }}
                 data-testid="button-google-login"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -199,7 +227,25 @@ export default function Login() {
               <Button 
                 variant="outline" 
                 className="h-12 px-0 rounded-xl border-muted-foreground/20 hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/40 transition-all gap-2 text-sm font-medium text-muted-foreground"
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => {
+                  // Apple Sign In requires client-side implementation
+                  // For now, show a message that it needs to be configured
+                  if (typeof window !== 'undefined' && (window as any).AppleID) {
+                    // Apple Sign In is available
+                    (window as any).AppleID.auth.signIn({
+                      requestedScopes: ['email', 'name'],
+                      usePopup: true,
+                    }).then((response: any) => {
+                      // Redirect to backend callback
+                      window.location.href = `/api/auth/apple?id_token=${response.id_token}&user=${encodeURIComponent(JSON.stringify(response.user || {}))}`;
+                    }).catch((error: any) => {
+                      console.error("Apple Sign In error:", error);
+                      toast.error("Apple Sign In failed. Please try again.");
+                    });
+                  } else {
+                    toast.info("Apple Sign In requires additional configuration. Please use email and password for now.");
+                  }
+                }}
                 data-testid="button-apple-login"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">

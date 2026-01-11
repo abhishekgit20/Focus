@@ -70,7 +70,10 @@ export const walletTransactions = pgTable("wallet_transactions", {
   stripePaymentId: text("stripe_payment_id"),
   razorpayPaymentId: text("razorpay_payment_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("IDX_wallet_transactions_wallet_id").on(table.walletId),
+  index("IDX_wallet_transactions_created_at").on(table.createdAt),
+]);
 
 // Razorpay payment orders for secure tracking
 export const paymentOrders = pgTable("payment_orders", {
@@ -98,7 +101,12 @@ export const sessions = pgTable("sessions", {
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("IDX_sessions_client_id").on(table.clientId),
+  index("IDX_sessions_professional_id").on(table.professionalId),
+  index("IDX_sessions_scheduled_at").on(table.scheduledAt),
+  index("IDX_sessions_status").on(table.status),
+]);
 
 // Professional earnings tracking
 export const earnings = pgTable("earnings", {
@@ -109,7 +117,10 @@ export const earnings = pgTable("earnings", {
   status: text("status").notNull().default("pending"), // 'pending', 'paid'
   paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("IDX_earnings_professional_id").on(table.professionalId),
+  index("IDX_earnings_created_at").on(table.createdAt),
+]);
 
 // Journal entries with AI insights
 export const journalEntries = pgTable("journal_entries", {
@@ -121,7 +132,10 @@ export const journalEntries = pgTable("journal_entries", {
   aiInsights: text("ai_insights"), // AI-generated insights
   tags: text("tags").array().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("IDX_journal_entries_user_id").on(table.userId),
+  index("IDX_journal_entries_created_at").on(table.createdAt),
+]);
 
 // Chat messages (AI chatbot conversations)
 export const chatMessages = pgTable("chat_messages", {
@@ -132,7 +146,11 @@ export const chatMessages = pgTable("chat_messages", {
   content: text("content").notNull(),
   bhagavadGitaReference: text("bhagavad_gita_reference"), // verse reference if applicable
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("IDX_chat_messages_user_id").on(table.userId),
+  index("IDX_chat_messages_conversation_id").on(table.conversationId),
+  index("IDX_chat_messages_created_at").on(table.createdAt),
+]);
 
 // Reviews and ratings for professionals
 export const reviews = pgTable("reviews", {
@@ -143,7 +161,98 @@ export const reviews = pgTable("reviews", {
   rating: integer("rating").notNull(), // 1-5
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("IDX_reviews_professional_id").on(table.professionalId),
+  index("IDX_reviews_created_at").on(table.createdAt),
+]);
+
+// Feedback/Testimonials from users
+export const feedback = pgTable("feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name"), // Optional - can be empty for anonymous
+  role: text("role"), // e.g., "Student", "Professional"
+  rating: integer("rating").notNull(), // 1-5
+  feedbackText: text("feedback_text").notNull(),
+  featuresUsed: text("features_used").array().default(sql`ARRAY[]::text[]`), // Array of features
+  showOnHomepage: boolean("show_on_homepage").notNull().default(false),
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_feedback_status").on(table.status),
+  index("IDX_feedback_show_on_homepage").on(table.showOnHomepage),
+  index("IDX_feedback_created_at").on(table.createdAt),
+]);
+
+// Daily emotional check-ins
+export const dailyCheckIns = pgTable("daily_check_ins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  feeling: text("feeling"), // Optional text or emoji
+  moodScore: integer("mood_score"), // Optional 1-10 scale
+  notes: text("notes"), // Optional additional context
+  checkInDate: timestamp("check_in_date").defaultNow().notNull(), // Date of check-in
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_daily_check_ins_user_id").on(table.userId),
+  index("IDX_daily_check_ins_check_in_date").on(table.checkInDate),
+]);
+
+// Micro-practices completion tracking
+export const microPractices = pgTable("micro_practices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  practiceType: text("practice_type").notNull(), // 'breathing', 'grounding', 'gratitude', 'meditation'
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+  durationSeconds: integer("duration_seconds"), // Optional, no pressure
+  notes: text("notes"), // Optional reflection
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_micro_practices_user_id").on(table.userId),
+  index("IDX_micro_practices_completed_at").on(table.completedAt),
+]);
+
+// Community challenges/events (optional participation)
+export const communityChallenges = pgTable("community_challenges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'meditation', 'breathing', 'gratitude', 'yoga'
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  participantCount: integer("participant_count").default(0), // Anonymous count only
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_community_challenges_active").on(table.isActive),
+  index("IDX_community_challenges_dates").on(table.startDate, table.endDate),
+]);
+
+// Challenge participation (anonymous, no social pressure)
+export const challengeParticipants = pgTable("challenge_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  challengeId: varchar("challenge_id").notNull().references(() => communityChallenges.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  // No completion tracking to avoid pressure
+}, (table) => [
+  index("IDX_challenge_participants_challenge").on(table.challengeId),
+  index("IDX_challenge_participants_user").on(table.userId),
+  index("IDX_challenge_participants_unique").on(table.challengeId, table.userId),
+]);
+
+// Voice messages for chatbot (optional)
+export const voiceMessages = pgTable("voice_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  conversationId: varchar("conversation_id").notNull(),
+  audioUrl: text("audio_url"), // Optional - stored audio if needed
+  transcript: text("transcript"), // Speech-to-text result
+  durationSeconds: integer("duration_seconds"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_voice_messages_user_id").on(table.userId),
+  index("IDX_voice_messages_conversation_id").on(table.conversationId),
+]);
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -228,6 +337,44 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   }),
 }));
 
+export const feedbackRelations = relations(feedback, () => ({}));
+
+export const dailyCheckInsRelations = relations(dailyCheckIns, ({ one }) => ({
+  user: one(users, {
+    fields: [dailyCheckIns.userId],
+    references: [users.id],
+  }),
+}));
+
+export const microPracticesRelations = relations(microPractices, ({ one }) => ({
+  user: one(users, {
+    fields: [microPractices.userId],
+    references: [users.id],
+  }),
+}));
+
+export const communityChallengesRelations = relations(communityChallenges, ({ many }) => ({
+  participants: many(challengeParticipants),
+}));
+
+export const challengeParticipantsRelations = relations(challengeParticipants, ({ one }) => ({
+  challenge: one(communityChallenges, {
+    fields: [challengeParticipants.challengeId],
+    references: [communityChallenges.id],
+  }),
+  user: one(users, {
+    fields: [challengeParticipants.userId],
+    references: [users.id],
+  }),
+}));
+
+export const voiceMessagesRelations = relations(voiceMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [voiceMessages.userId],
+    references: [users.id],
+  }),
+}));
+
 export const earningsRelations = relations(earnings, ({ one }) => ({
   professional: one(users, {
     fields: [earnings.professionalId],
@@ -284,10 +431,41 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   createdAt: true,
 });
 
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPaymentOrderSchema = createInsertSchema(paymentOrders).omit({
   id: true,
   createdAt: true,
   completedAt: true,
+});
+
+export const insertDailyCheckInSchema = createInsertSchema(dailyCheckIns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMicroPracticeSchema = createInsertSchema(microPractices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCommunityChallengeSchema = createInsertSchema(communityChallenges).omit({
+  id: true,
+  createdAt: true,
+  participantCount: true,
+});
+
+export const insertChallengeParticipantSchema = createInsertSchema(challengeParticipants).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertVoiceMessageSchema = createInsertSchema(voiceMessages).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
@@ -318,8 +496,26 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Feedback = typeof feedback.$inferSelect;
+
 export type InsertPaymentOrder = z.infer<typeof insertPaymentOrderSchema>;
 export type PaymentOrder = typeof paymentOrders.$inferSelect;
+
+export type InsertDailyCheckIn = z.infer<typeof insertDailyCheckInSchema>;
+export type DailyCheckIn = typeof dailyCheckIns.$inferSelect;
+
+export type InsertMicroPractice = z.infer<typeof insertMicroPracticeSchema>;
+export type MicroPractice = typeof microPractices.$inferSelect;
+
+export type InsertCommunityChallenge = z.infer<typeof insertCommunityChallengeSchema>;
+export type CommunityChallenge = typeof communityChallenges.$inferSelect;
+
+export type InsertChallengeParticipant = z.infer<typeof insertChallengeParticipantSchema>;
+export type ChallengeParticipant = typeof challengeParticipants.$inferSelect;
+
+export type InsertVoiceMessage = z.infer<typeof insertVoiceMessageSchema>;
+export type VoiceMessage = typeof voiceMessages.$inferSelect;
 
 // Upsert user type for Replit Auth
 export type UpsertUser = typeof users.$inferInsert;

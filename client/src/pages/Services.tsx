@@ -102,7 +102,9 @@ export default function Services() {
                   <span>National Mental Health Program (NMHP) Alignment</span>
                 </li>
               </ul>
-              <Button variant="outline" className="rounded-full">Partner With Us</Button>
+              <Link href="/partner-with-us">
+                <Button variant="outline" className="rounded-full">Partner With Us</Button>
+              </Link>
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm border">
               <h4 className="font-bold mb-2">Our Reach</h4>

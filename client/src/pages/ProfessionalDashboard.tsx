@@ -2,7 +2,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { 
@@ -24,6 +24,7 @@ import {
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import dashboardImg from "@assets/generated_images/professional_therapist_dashboard_with_analytics_and_appointments.png";
 import complianceBadge from "@assets/generated_images/secure_medical_data_privacy_compliance_shield_badge.png";
 
@@ -55,10 +56,34 @@ interface SessionData {
   };
 }
 
+interface ProfessionalProfileData {
+  profile: {
+    specialization: string;
+    qualification?: string;
+    experience?: number;
+  };
+  user: {
+    id: string;
+    fullName: string;
+    profileImage?: string;
+  };
+}
+
 export default function ProfessionalDashboard() {
   const [isOnline, setIsOnline] = useState(true);
   const [sessionIdInput, setSessionIdInput] = useState("");
   const [, setLocation] = useLocation();
+  const { user: currentUser, isLoading: isUserLoading } = useAuth();
+
+  const { data: profileData, isLoading: isProfileLoading } = useQuery<ProfessionalProfileData>({
+    queryKey: ['/api/professional/profile'],
+    queryFn: async () => {
+      const res = await fetch('/api/professional/profile', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch profile');
+      return res.json();
+    },
+    enabled: !!currentUser, // Only fetch if user is authenticated
+  });
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/professional/stats'],
@@ -136,12 +161,26 @@ export default function ProfessionalDashboard() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-8">
               <Avatar className="h-12 w-12 border-2 border-primary">
-                <AvatarImage src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200" />
-                <AvatarFallback>DR</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                  {profileData?.user?.fullName 
+                    ? profileData.user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                    : currentUser?.fullName 
+                      ? currentUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                      : 'P'}
+                </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-bold text-sm">Dr. Arjun Mehta</h3>
-                <p className="text-xs text-muted-foreground">Psychiatrist</p>
+                {isProfileLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="text-xs text-muted-foreground">Loading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-sm">{profileData?.user?.fullName || currentUser?.fullName || "Professional"}</h3>
+                    <p className="text-xs text-muted-foreground">{profileData?.profile?.specialization || "Professional"}</p>
+                  </>
+                )}
               </div>
             </div>
             
@@ -201,7 +240,7 @@ export default function ProfessionalDashboard() {
               <div>
                 <h1 className="text-3xl font-bold font-serif" data-testid="text-dashboard-title">Dashboard</h1>
                 <p className="text-muted-foreground" data-testid="text-welcome-message">
-                  Welcome back, Dr. Mehta. You have {stats?.upcomingSessions || 0} upcoming sessions.
+                  Welcome back, {profileData?.user?.fullName?.split(' ')[0] || currentUser?.fullName?.split(' ')[0] || "Professional"}. You have {stats?.upcomingSessions || 0} upcoming sessions.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -264,8 +303,11 @@ export default function ProfessionalDashboard() {
                           <div key={session.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-all" data-testid={`session-${session.id}`}>
                             <div className="flex items-center gap-4">
                               <Avatar>
-                                <AvatarImage src={session.client?.profileImage} />
-                                <AvatarFallback>{session.client?.fullName?.charAt(0) || 'C'}</AvatarFallback>
+                                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                  {session.client?.fullName 
+                                    ? session.client.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                                    : 'C'}
+                                </AvatarFallback>
                               </Avatar>
                               <div>
                                 <h4 className="font-bold">{session.client?.fullName || 'Client'}</h4>

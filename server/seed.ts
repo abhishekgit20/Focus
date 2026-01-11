@@ -131,10 +131,22 @@ async function seed() {
       console.log("✅ Created professional:", prof.fullName);
     }
     
+    // Create admin user
+    const [admin] = await db.insert(users).values({
+      email: "admin@focus.com",
+      password: hashedPassword,
+      role: "admin",
+      fullName: "Focus Admin",
+      phone: "+91 99999 99999",
+    }).returning();
+    
+    console.log("✅ Created admin user:", admin.email);
+    
     console.log("\n🎉 Database seeded successfully!");
     console.log("\n📝 Test credentials:");
     console.log("Client: rahul@example.com / password123");
     console.log("Professional: dr.mehta@focus.com / password123");
+    console.log("Admin: admin@focus.com / password123");
     
   } catch (error) {
     console.error("❌ Error seeding database:", error);

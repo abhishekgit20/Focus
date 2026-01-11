@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
-import { Send, User, Sparkles, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Send, User, Sparkles, Loader2, Volume2, VolumeX, Mic, MicOff } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   role: string;
@@ -62,8 +63,11 @@ export default function Chatbot() {
   const [isTyping, setIsTyping] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const { toast } = useToast();
 
   const detectLanguage = (text: string): { lang: string; code: string } => {
     const langPatterns = [
@@ -149,13 +153,59 @@ export default function Chatbot() {
     }
   }, [speakingIndex]);
 
+  // Initialize voice recognition
   useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-IN,hi-IN'; // English and Hindi
+        
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setInput(transcript);
+          setIsListening(false);
+          toast({
+            title: "Voice input received",
+            description: "You can edit or send your message.",
+            duration: 2000,
+          });
+        };
+        
+        recognition.onerror = (event: any) => {
+          setIsListening(false);
+          if (event.error !== 'no-speech') {
+            toast({
+              title: "Voice input unavailable",
+              description: "You can still type your message.",
+              duration: 3000,
+            });
+          }
+        };
+        
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+        
+        recognitionRef.current = recognition;
+      }
+    }
+    
     return () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore errors when stopping
+        }
+      }
     };
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -163,8 +213,43 @@ export default function Chatbot() {
     }
   }, [messages, isTyping]);
 
+  const startListening = useCallback(() => {
+    if (recognitionRef.current && !isListening && !isTyping) {
+      try {
+        setIsListening(true);
+        recognitionRef.current.start();
+        toast({
+          title: "Listening...",
+          description: "Speak your message. I'm here to listen.",
+          duration: 2000,
+        });
+      } catch (error) {
+        setIsListening(false);
+        toast({
+          title: "Voice input unavailable",
+          description: "You can still type your message.",
+          duration: 3000,
+        });
+      }
+    }
+  }, [isListening, isTyping, toast]);
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListening) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore errors
+      }
+      setIsListening(false);
+    }
+  }, [isListening]);
+
   const handleSend = async () => {
     if (!input.trim()) return;
+    
+    // Stop listening if active
+    stopListening();
     
     const userMessage = input.trim();
     const userMsg = { role: "user", text: userMessage };
@@ -333,16 +418,37 @@ export default function Chatbot() {
               <Input 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    stopListening();
+                    handleSend();
+                  }
+                }}
                 placeholder="How are you feeling? (e.g. stressed, angry, confused)"
                 className="rounded-full bg-muted/30 border-muted-foreground/20 focus-visible:ring-primary pl-6 py-6"
-                disabled={isTyping}
+                disabled={isTyping || isListening}
               />
+              {recognitionRef.current && (
+                <Button
+                  onClick={isListening ? stopListening : startListening}
+                  size="icon"
+                  variant={isListening ? "destructive" : "outline"}
+                  className={`w-12 h-12 rounded-full shrink-0 ${
+                    isListening 
+                      ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" 
+                      : "border-muted-foreground/20 hover:bg-muted/50"
+                  }`}
+                  disabled={isTyping}
+                  title={isListening ? "Stop listening" : "Voice input (optional)"}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </Button>
+              )}
               <Button 
                 onClick={handleSend}
                 size="icon" 
                 className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 shrink-0"
-                disabled={isTyping || !input.trim()}
+                disabled={isTyping || !input.trim() || isListening}
               >
                 {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </Button>

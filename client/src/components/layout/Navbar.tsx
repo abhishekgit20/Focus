@@ -1,8 +1,12 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Menu, X, Globe, LogOut } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
+import { logout } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,9 +18,10 @@ import {
 export function Navbar() {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [lang, setLang] = useState("English");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('client');
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Check initial state
@@ -31,13 +36,30 @@ export function Navbar() {
     return () => window.removeEventListener('auth-change', checkAuth);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userRole');
-    window.dispatchEvent(new Event('auth-change'));
-    // Optional: redirect to home
-    if (window.location.pathname === '/profile' || window.location.pathname === '/professional-dashboard') {
-      window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      // Call logout API to clear server session
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // Clear localStorage
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      
+      // Invalidate auth query to clear cached user data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.setQueryData(["/api/auth/user"], null);
+      
+      // Dispatch auth change event
+      window.dispatchEvent(new Event('auth-change'));
+      
+      // Redirect to home if on protected pages
+      if (window.location.pathname === '/profile' || window.location.pathname === '/professional-dashboard' || window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/';
+      }
     }
   };
 
@@ -76,43 +98,29 @@ export function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
-                <Globe className="w-4 h-4" /> {lang}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setLang("English")}>English</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Hindi")}>Hindi</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Tamil")}>Tamil</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Bengali")}>Bengali</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Telugu")}>Telugu</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Marathi")}>Marathi</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Kannada")}>Kannada</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Malayalam")}>Malayalam</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Gujarati")}>Gujarati</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang("Punjabi")}>Punjabi</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {isLoggedIn ? (
             <DropdownMenu onOpenChange={(open) => {
               if (open) window.dispatchEvent(new Event('hide-crisis-banner'));
             }}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full w-9 h-9">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
-                    <img 
-                      src={userRole === 'professional' ? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200" : "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"}
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <Avatar className="w-9 h-9 border border-primary/20">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {user?.fullName 
+                        ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        : localStorage.getItem('userName')
+                          ? localStorage.getItem('userName')!.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+                          : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {userRole === 'professional' ? (
+                {userRole === 'admin' ? (
+                  <Link href="/admin/feedback">
+                    <DropdownMenuItem className="cursor-pointer">Admin Dashboard</DropdownMenuItem>
+                  </Link>
+                ) : userRole === 'professional' ? (
                   <Link href="/professional-dashboard">
                     <DropdownMenuItem className="cursor-pointer">Professional Dashboard</DropdownMenuItem>
                   </Link>
@@ -163,7 +171,11 @@ export function Navbar() {
           ))}
           {isLoggedIn ? (
             <>
-              {userRole === 'professional' ? (
+              {userRole === 'admin' ? (
+                <Link href="/admin/feedback" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                  Admin Dashboard
+                </Link>
+              ) : userRole === 'professional' ? (
                 <Link href="/professional-dashboard" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
                   Dashboard
                 </Link>

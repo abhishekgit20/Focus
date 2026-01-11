@@ -10,6 +10,12 @@ import {
   chatMessages,
   reviews,
   paymentOrders,
+  feedback,
+  dailyCheckIns,
+  microPractices,
+  communityChallenges,
+  challengeParticipants,
+  voiceMessages,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -31,6 +37,18 @@ import {
   type InsertReview,
   type PaymentOrder,
   type InsertPaymentOrder,
+  type Feedback,
+  type InsertFeedback,
+  type DailyCheckIn,
+  type InsertDailyCheckIn,
+  type MicroPractice,
+  type InsertMicroPractice,
+  type CommunityChallenge,
+  type InsertCommunityChallenge,
+  type ChallengeParticipant,
+  type InsertChallengeParticipant,
+  type VoiceMessage,
+  type InsertVoiceMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
@@ -85,6 +103,32 @@ export interface IStorage {
   createPaymentOrder(razorpayOrderId: string, userId: string, amount: string): Promise<PaymentOrder>;
   getPaymentOrder(razorpayOrderId: string): Promise<PaymentOrder | undefined>;
   markPaymentOrderCompleted(razorpayOrderId: string, razorpayPaymentId: string): Promise<PaymentOrder | undefined>;
+  
+  // Feedback operations
+  createFeedback(feedbackData: InsertFeedback): Promise<Feedback>;
+  getApprovedTestimonials(): Promise<Feedback[]>;
+  getAllFeedback(): Promise<Feedback[]>;
+  updateFeedbackStatus(id: string, status: 'pending' | 'approved' | 'rejected'): Promise<Feedback | undefined>;
+  
+  // Daily check-in operations
+  createDailyCheckIn(checkIn: InsertDailyCheckIn): Promise<DailyCheckIn>;
+  getTodayCheckIn(userId: string): Promise<DailyCheckIn | undefined>;
+  getRecentCheckIns(userId: string, days?: number): Promise<DailyCheckIn[]>;
+  
+  // Micro-practices operations
+  createMicroPractice(practice: InsertMicroPractice): Promise<MicroPractice>;
+  getUserMicroPractices(userId: string, days?: number): Promise<MicroPractice[]>;
+  
+  // Community challenges operations
+  createCommunityChallenge(challenge: InsertCommunityChallenge): Promise<CommunityChallenge>;
+  getActiveChallenges(): Promise<CommunityChallenge[]>;
+  joinChallenge(challengeId: string, userId: string): Promise<ChallengeParticipant>;
+  getUserChallenges(userId: string): Promise<Array<CommunityChallenge & { joined: boolean }>>;
+  getChallengeParticipantCount(challengeId: string): Promise<number>;
+  
+  // Voice messages operations
+  createVoiceMessage(message: InsertVoiceMessage): Promise<VoiceMessage>;
+  getVoiceMessages(conversationId: string): Promise<VoiceMessage[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -405,6 +449,202 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return updated || undefined;
+  }
+
+  // Feedback operations
+  async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
+    const [created] = await db.insert(feedback).values({
+      ...feedbackData,
+      status: "pending",
+    }).returning();
+    return created;
+  }
+
+  async getApprovedTestimonials(): Promise<Feedback[]> {
+    return await db
+      .select()
+      .from(feedback)
+      .where(
+        and(
+          eq(feedback.status, "approved"),
+          eq(feedback.showOnHomepage, true)
+        )
+      )
+      .orderBy(desc(feedback.createdAt));
+  }
+
+  async getAllFeedback(): Promise<Feedback[]> {
+    return await db
+      .select()
+      .from(feedback)
+      .orderBy(desc(feedback.createdAt));
+  }
+
+  async updateFeedbackStatus(id: string, status: 'pending' | 'approved' | 'rejected'): Promise<Feedback | undefined> {
+    const [updated] = await db
+      .update(feedback)
+      .set({ status })
+      .where(eq(feedback.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Daily check-in operations
+  async createDailyCheckIn(checkIn: InsertDailyCheckIn): Promise<DailyCheckIn> {
+    const [created] = await db.insert(dailyCheckIns).values(checkIn).returning();
+    return created;
+  }
+
+  async getTodayCheckIn(userId: string): Promise<DailyCheckIn | undefined> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [checkIn] = await db
+      .select()
+      .from(dailyCheckIns)
+      .where(
+        and(
+          eq(dailyCheckIns.userId, userId),
+          gte(dailyCheckIns.checkInDate, today),
+          lte(dailyCheckIns.checkInDate, tomorrow)
+        )
+      )
+      .limit(1);
+    return checkIn || undefined;
+  }
+
+  async getRecentCheckIns(userId: string, days: number = 7): Promise<DailyCheckIn[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    return await db
+      .select()
+      .from(dailyCheckIns)
+      .where(
+        and(
+          eq(dailyCheckIns.userId, userId),
+          gte(dailyCheckIns.checkInDate, startDate)
+        )
+      )
+      .orderBy(desc(dailyCheckIns.checkInDate));
+  }
+
+  // Micro-practices operations
+  async createMicroPractice(practice: InsertMicroPractice): Promise<MicroPractice> {
+    const [created] = await db.insert(microPractices).values(practice).returning();
+    return created;
+  }
+
+  async getUserMicroPractices(userId: string, days: number = 30): Promise<MicroPractice[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    return await db
+      .select()
+      .from(microPractices)
+      .where(
+        and(
+          eq(microPractices.userId, userId),
+          gte(microPractices.completedAt, startDate)
+        )
+      )
+      .orderBy(desc(microPractices.completedAt));
+  }
+
+  // Community challenges operations
+  async createCommunityChallenge(challenge: InsertCommunityChallenge): Promise<CommunityChallenge> {
+    const [created] = await db.insert(communityChallenges).values(challenge).returning();
+    return created;
+  }
+
+  async getActiveChallenges(): Promise<CommunityChallenge[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(communityChallenges)
+      .where(
+        and(
+          eq(communityChallenges.isActive, true),
+          lte(communityChallenges.startDate, now),
+          gte(communityChallenges.endDate, now)
+        )
+      )
+      .orderBy(desc(communityChallenges.startDate));
+  }
+
+  async joinChallenge(challengeId: string, userId: string): Promise<ChallengeParticipant> {
+    // Check if already joined
+    const [existing] = await db
+      .select()
+      .from(challengeParticipants)
+      .where(
+        and(
+          eq(challengeParticipants.challengeId, challengeId),
+          eq(challengeParticipants.userId, userId)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      return existing;
+    }
+
+    // Join challenge
+    const [participant] = await db
+      .insert(challengeParticipants)
+      .values({ challengeId, userId })
+      .returning();
+
+    // Update participant count (anonymous)
+    await db
+      .update(communityChallenges)
+      .set({
+        participantCount: sql`${communityChallenges.participantCount} + 1`,
+      })
+      .where(eq(communityChallenges.id, challengeId));
+
+    return participant;
+  }
+
+  async getUserChallenges(userId: string): Promise<Array<CommunityChallenge & { joined: boolean }>> {
+    const challenges = await this.getActiveChallenges();
+    const userParticipations = await db
+      .select()
+      .from(challengeParticipants)
+      .where(eq(challengeParticipants.userId, userId));
+
+    const joinedIds = new Set(userParticipations.map(p => p.challengeId));
+
+    return challenges.map(challenge => ({
+      ...challenge,
+      joined: joinedIds.has(challenge.id),
+    }));
+  }
+
+  async getChallengeParticipantCount(challengeId: string): Promise<number> {
+    const [result] = await db
+      .select({
+        count: sql<number>`COUNT(*)::integer`,
+      })
+      .from(challengeParticipants)
+      .where(eq(challengeParticipants.challengeId, challengeId));
+    return result?.count || 0;
+  }
+
+  // Voice messages operations
+  async createVoiceMessage(message: InsertVoiceMessage): Promise<VoiceMessage> {
+    const [created] = await db.insert(voiceMessages).values(message).returning();
+    return created;
+  }
+
+  async getVoiceMessages(conversationId: string): Promise<VoiceMessage[]> {
+    return await db
+      .select()
+      .from(voiceMessages)
+      .where(eq(voiceMessages.conversationId, conversationId))
+      .orderBy(desc(voiceMessages.createdAt));
   }
 }
 

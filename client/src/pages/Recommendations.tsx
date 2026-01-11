@@ -7,6 +7,7 @@ import heroImg from "@assets/generated_images/cozy_reading_recommendation_hero.p
 import { Search, BookOpen, Star, Sparkles, ExternalLink, Loader2, FileText, Microscope } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 
 type Recommendation = {
   id: number;
@@ -17,8 +18,74 @@ type Recommendation = {
   tags: string[];
   image: string;
   rating: number;
+  mindfulnessSummary?: string;
+  whyHelpful?: string;
+  externalLink?: string;
+  buyLink?: string;
+  summaryRoute?: string;
 };
 
+// Book data - source of truth (exact structure as provided)
+const books = [
+  {
+    id: "power-of-now",
+    title: "The Power of Now",
+    author: "Eckhart Tolle",
+    imageUrl: "https://m.media-amazon.com/images/I/51d7LooDKlL._SL1000_.jpg",
+    summaryRoute: "/reads/power-of-now",
+    buyLink: "https://www.amazon.in/dp/0340733500"
+  },
+  {
+    id: "atomic-habits",
+    title: "Atomic Habits",
+    author: "James Clear",
+    imageUrl: "https://m.media-amazon.com/images/I/817HaeblezL._SL1500_.jpg",
+    summaryRoute: "/reads/atomic-habits",
+    buyLink: "https://www.amazon.in/dp/1847941834"
+  },
+  {
+    id: "why-we-sleep",
+    title: "Why We Sleep",
+    author: "Matthew Walker",
+    imageUrl: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1556604137l/34466963.jpg",
+    summaryRoute: "/reads/why-we-sleep",
+    buyLink: "https://www.amazon.in/dp/0141983760"
+  },
+  {
+    id: "mans-search-for-meaning",
+    title: "Man's Search for Meaning",
+    author: "Viktor E. Frankl",
+    imageUrl: "https://m.media-amazon.com/images/I/71dhcyg+THL._SL1500_.jpg",
+    summaryRoute: "/reads/mans-search-for-meaning",
+    buyLink: "https://www.amazon.in/dp/1844132390"
+  },
+  {
+    id: "bhagavad-gita",
+    title: "The Bhagavad Gita",
+    author: "Vyasa",
+    imageUrl: "https://m.media-amazon.com/images/I/51f43sie9OL.jpg",
+    summaryRoute: "/reads/bhagavad-gita",
+    buyLink: "https://www.amazon.in/Shrimad-Bhagvad-Sachitra-Shlokarth-Hardcover/dp/B09B7DFC4V"
+  },
+  {
+    id: "upanishads",
+    title: "The Upanishads",
+    author: "Various Sages",
+    imageUrl: "https://m.media-amazon.com/images/I/61-OUOKJtDL._SL1400_.jpg",
+    summaryRoute: "/reads/upanishads",
+    buyLink: "https://www.amazon.in/Upanishads-Eknath-Easwaran/dp/8184950918"
+  },
+  {
+    id: "yoga-sutras",
+    title: "The Yoga Sutras of Patanjali",
+    author: "Patanjali",
+    imageUrl: "https://m.media-amazon.com/images/I/61wBStxDLiL._SL1500_.jpg",
+    summaryRoute: "/reads/yoga-sutras",
+    buyLink: "https://www.amazon.in/Yoga-Sutras-Patanjali-Swami-Satchidananda/dp/1938477073"
+  }
+];
+
+// Convert books to Recommendation format for compatibility
 const mockDatabase: Recommendation[] = [
   {
     id: 1,
@@ -27,8 +94,10 @@ const mockDatabase: Recommendation[] = [
     type: "book",
     description: "A guide to spiritual enlightenment that emphasizes the importance of living in the present moment.",
     tags: ["Mindfulness", "Spirituality", "Self-Help"],
-    image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.8
+    image: "https://m.media-amazon.com/images/I/51d7LooDKlL._SL1000_.jpg",
+    rating: 4.8,
+    summaryRoute: "/reads/power-of-now",
+    buyLink: "https://www.amazon.in/dp/0340733500"
   },
   {
     id: 2,
@@ -37,28 +106,22 @@ const mockDatabase: Recommendation[] = [
     type: "book",
     description: "An easy and proven way to build good habits and break bad ones.",
     tags: ["Productivity", "Self-Improvement", "Psychology"],
-    image: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.9
+    image: "https://m.media-amazon.com/images/I/817HaeblezL._SL1500_.jpg",
+    rating: 4.9,
+    summaryRoute: "/reads/atomic-habits",
+    buyLink: "https://www.amazon.in/dp/1847941834"
   },
+  // Additional non-book resources
   {
-    id: 3,
+    id: 8,
     title: "Headspace",
     author: "Meditation & Sleep",
     type: "website",
     description: "Your guide to mindfulness for your everyday life. Learn to meditate and live mindfully.",
     tags: ["Meditation", "App", "Wellness"],
-    image: "https://images.unsplash.com/photo-1517960413843-0aee8e2b3285?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.7
-  },
-  {
-    id: 4,
-    title: "Why We Sleep",
-    author: "Matthew Walker",
-    type: "book",
-    description: "Unlocking the power of sleep and dreams for a healthier life.",
-    tags: ["Health", "Science", "Sleep"],
-    image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.8
+    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=400&h=600",
+    rating: 4.7,
+    externalLink: "https://www.headspace.com"
   },
   {
     id: 5,
@@ -67,8 +130,11 @@ const mockDatabase: Recommendation[] = [
     type: "website",
     description: "The #1 app for sleep and meditation. Join the millions experiencing lower stress and less anxiety.",
     tags: ["Relaxation", "Sleep", "Stress Relief"],
-    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.6
+    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=400&h=600",
+    rating: 4.6,
+    mindfulnessSummary: "Calm provides meditation sessions, sleep stories, and breathing exercises designed to help you find moments of peace throughout your day.",
+    whyHelpful: "If you're looking for gentle, accessible ways to manage stress or improve sleep, this resource offers structured support.",
+    externalLink: "https://www.calm.com"
   },
   {
     id: 6,
@@ -77,8 +143,10 @@ const mockDatabase: Recommendation[] = [
     type: "book",
     description: "A psychiatrist's memoir that has riveted generations of readers with its descriptions of life in Nazi death camps and its lessons for spiritual survival.",
     tags: ["Philosophy", "Psychology", "Classic"],
-    image: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.9
+    image: "https://m.media-amazon.com/images/I/71dhcyg+THL._SL1500_.jpg",
+    rating: 4.9,
+    summaryRoute: "/reads/mans-search-for-meaning",
+    buyLink: "https://www.amazon.in/dp/1844132390"
   },
   {
     id: 7,
@@ -87,8 +155,10 @@ const mockDatabase: Recommendation[] = [
     type: "book",
     description: "The timeless spiritual classic on duty, action, and devotion. A dialogue between Prince Arjuna and Lord Krishna offering guidance on how to live a spiritual life.",
     tags: ["Spirituality", "Hinduism", "Wisdom", "Stress Relief"],
-    image: "https://images.unsplash.com/photo-1602133185181-4b9535d7c329?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 5.0
+    image: "https://m.media-amazon.com/images/I/51f43sie9OL.jpg",
+    rating: 5.0,
+    summaryRoute: "/reads/bhagavad-gita",
+    buyLink: "https://www.amazon.in/Shrimad-Bhagvad-Sachitra-Shlokarth-Hardcover/dp/B09B7DFC4V"
   },
   {
     id: 8,
@@ -97,8 +167,10 @@ const mockDatabase: Recommendation[] = [
     type: "book",
     description: "Ancient texts that explore the nature of reality, the self (Atman), and the universal spirit (Brahman). Essential for deep spiritual inquiry.",
     tags: ["Philosophy", "Ancient Wisdom", "Meditation"],
-    image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.9
+    image: "https://m.media-amazon.com/images/I/61-OUOKJtDL._SL1400_.jpg",
+    rating: 4.9,
+    summaryRoute: "/reads/upanishads",
+    buyLink: "https://www.amazon.in/Upanishads-Eknath-Easwaran/dp/8184950918"
   },
   {
     id: 9,
@@ -107,8 +179,10 @@ const mockDatabase: Recommendation[] = [
     type: "book",
     description: "The foundational text of Yoga philosophy, providing a practical guide to mastering the mind and achieving inner peace.",
     tags: ["Yoga", "Meditation", "Mindfulness"],
-    image: "https://images.unsplash.com/photo-1599447421405-0c1a1571550c?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.9
+    image: "https://m.media-amazon.com/images/I/61wBStxDLiL._SL1500_.jpg",
+    rating: 4.9,
+    summaryRoute: "/reads/yoga-sutras",
+    buyLink: "https://www.amazon.in/Yoga-Sutras-Patanjali-Swami-Satchidananda/dp/1938477073"
   },
   {
     id: 10,
@@ -117,28 +191,37 @@ const mockDatabase: Recommendation[] = [
     type: "article",
     description: "A comprehensive look at how yoga modulation of stress response systems can help reduce anxiety and depression.",
     tags: ["Health", "Science", "Yoga"],
-    image: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.8
+    image: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?auto=format&fit=crop&q=80&w=400&h=600",
+    rating: 4.8,
+    mindfulnessSummary: "This article explores the scientific evidence for how yoga practices can support mental health.",
+    whyHelpful: "If you're curious about the science behind how yoga and mindfulness practices support mental health, this resource offers evidence-based insights.",
+    externalLink: "https://www.health.harvard.edu/mind-and-mood/yoga-for-anxiety-and-depression"
   },
   {
     id: 11,
     title: "Effectiveness of Gita-based Intervention",
-    author: "Journal of Religion & Health",
+    author: "PLOS ONE",
     type: "research",
-    description: "Clinical study on the impact of Bhagavad Gita teachings on stress levels in medical students.",
-    tags: ["Research", "Psychology", "Clinical Study"],
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.7
+    description: "Randomised controlled trial evaluating the effectiveness of a Bhagavad Gita intervention to reduce psychological distress in homeless people.",
+    tags: ["Research", "Psychology", "Clinical Study", "Randomised Controlled Trial"],
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=400&h=600",
+    rating: 4.7,
+    mindfulnessSummary: "This research study examines how teachings from the Bhagavad Gita can be applied in therapeutic contexts to support stress management and reduce psychological distress.",
+    whyHelpful: "For those interested in understanding how traditional spiritual texts can inform modern mental health practices, this research offers valuable insights from a rigorous randomised controlled trial.",
+    externalLink: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11537408/"
   },
   {
     id: 12,
-    title: "Mindfulness in Indian Scripture",
-    author: "Psychology Today",
+    title: "Meditation and Mindfulness in Indian Philosophical Traditions",
+    author: "Dr. Rishika Verma - ShodhSamajik",
     type: "article",
-    description: "Exploring the roots of modern mindfulness practices in ancient Hindu and Buddhist texts.",
-    tags: ["History", "Mindfulness", "Culture"],
-    image: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&q=80&w=200&h=300",
-    rating: 4.6
+    description: "Exploring meditation and mindfulness as integral tools in Indian philosophical traditions for achieving self-awareness, spiritual growth, and liberation (moksha).",
+    tags: ["Philosophy", "Mindfulness", "Meditation", "Vedas", "Upanishads", "Yoga"],
+    image: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&q=80&w=400&h=600",
+    rating: 4.6,
+    mindfulnessSummary: "This scholarly article explores the historical, theoretical, and practical dimensions of meditation and mindfulness within key Indian philosophical schools, including Vedanta, Yoga, and Buddhism, and their influence on global well-being and mental health.",
+    whyHelpful: "If you're interested in understanding the deep philosophical roots of mindfulness practices in Indian traditions, this academic resource provides valuable insights into how these practices have evolved and influenced contemporary approaches to mental health.",
+    externalLink: "https://shodhsamajik.com/shodhsamajik/article/view/10"
   }
 ];
 
@@ -257,11 +340,17 @@ export default function Recommendations() {
                   transition={{ delay: index * 0.1 }}
                   className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
                 >
-                  <div className="relative h-48 overflow-hidden bg-muted">
+                  <div className="relative h-64 overflow-hidden bg-muted flex items-center justify-center">
                     <img 
                       src={item.image} 
                       alt={item.title} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://via.placeholder.com/400x600?text=Book+Cover";
+                      }}
+                      loading="lazy"
                     />
                     <div className="absolute top-4 right-4 bg-background/90 backdrop-blur px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 shadow-sm">
                       <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /> {item.rating}
@@ -286,9 +375,39 @@ export default function Recommendations() {
                       ))}
                     </div>
 
-                    <Button variant="outline" className="w-full rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                      Read {item.type === 'book' ? 'Summary' : 'Now'} <ExternalLink className="ml-2 w-3 h-3" />
-                    </Button>
+                    {item.type === 'book' ? (
+                      item.summaryRoute ? (
+                        <Link href={item.summaryRoute}>
+                          <Button variant="outline" className="w-full rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                            Read Summary <ExternalLink className="ml-2 w-3 h-3" />
+                          </Button>
+                        </Link>
+                      ) : item.buyLink ? (
+                        <Button 
+                          variant="outline" 
+                          className="w-full rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all"
+                          onClick={() => window.open(item.buyLink, '_blank', 'noopener,noreferrer')}
+                        >
+                          Read Book <ExternalLink className="ml-2 w-3 h-3" />
+                        </Button>
+                      ) : null
+                    ) : (
+                      item.externalLink ? (
+                        <Button 
+                          variant="outline" 
+                          className="w-full rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all"
+                          onClick={() => window.open(item.externalLink, '_blank', 'noopener,noreferrer')}
+                        >
+                          Read Now <ExternalLink className="ml-2 w-3 h-3" />
+                        </Button>
+                      ) : (
+                        <Link href={`/recommendations/${item.id}`}>
+                          <Button variant="outline" className="w-full rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                            Read Summary <ExternalLink className="ml-2 w-3 h-3" />
+                          </Button>
+                        </Link>
+                      )
+                    )}
                   </div>
                 </motion.div>
               ))}

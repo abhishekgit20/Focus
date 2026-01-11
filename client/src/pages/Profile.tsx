@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, History, Video, Phone, MessageSquare } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, History, Video, Phone, MessageSquare, Loader2, Heart, Flower } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Tooltip,
   TooltipContent,
@@ -95,6 +97,7 @@ const WELLNESS_FACTS = [
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isLoading: isUserLoading, isAuthenticated } = useAuth();
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [journalEntry, setJournalEntry] = useState("");
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
@@ -103,11 +106,13 @@ export default function Profile() {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
+    if (!isUserLoading && !isAuthenticated) {
       setLocation("/login");
+    } else if (!isUserLoading && user && user.role === 'admin') {
+      // Redirect admin users to admin dashboard
+      setLocation("/admin/feedback");
     }
-  }, [setLocation]);
+  }, [isUserLoading, isAuthenticated, user, setLocation]);
 
   useEffect(() => {
     if (!isAutoRotating) return;
@@ -172,15 +177,28 @@ export default function Profile() {
               <div className="h-32 bg-gradient-to-r from-orange-100 to-orange-200"></div>
               <div className="px-6 pb-6 relative text-center pt-16">
                 <div className="w-24 h-24 rounded-full bg-white p-1 absolute -top-12 left-1/2 -translate-x-1/2 shadow-md">
-                  <img 
-                    src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" 
-                    alt="User" 
-                    className="w-full h-full rounded-full object-cover"
-                  />
+                  <Avatar className="w-full h-full">
+                    <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+                      {user?.fullName 
+                        ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold font-serif text-foreground">Aditya Kumar</h2>
-                  <p className="text-muted-foreground">Focus Member since 2024</p>
+                  {isUserLoading ? (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-muted-foreground">Loading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <h2 className="text-2xl font-bold font-serif text-foreground">{user?.fullName || "User"}</h2>
+                      <p className="text-muted-foreground">
+                        Focus Member since {user?.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear()}
+                      </p>
+                    </>
+                  )}
                   <div className="flex gap-2 mt-4 justify-center items-center">
                     <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200">Premium</Badge>
                     <TooltipProvider>
@@ -203,15 +221,25 @@ export default function Profile() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Your Stats</CardTitle>
+                <CardTitle className="text-lg">Your wellbeing snapshot</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">Monthly Goal</span>
+                    <span className="text-muted-foreground">This month's self-care</span>
                     <span className="font-bold">75%</span>
                   </div>
                   <Progress value={75} className="h-2" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[10px] text-muted-foreground mt-1 cursor-help">Progress is personal — there's no right pace</p>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">This reflects your journey, not a target to meet. Every step forward is meaningful.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="bg-muted/30 p-3 rounded-xl text-center">
@@ -234,15 +262,38 @@ export default function Profile() {
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-3xl font-bold font-serif mb-2 text-foreground">My Journey</h1>
-                  <p className="text-muted-foreground">Track your progress and mental wellness over time.</p>
+                  <p className="text-muted-foreground">Your path to wellbeing, at your own pace.</p>
                 </div>
-                <Link href="/formula-guide">
-                  <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
-                    <HelpCircle className="w-4 h-4" />
-                    How is this calculated?
-                  </Button>
-                </Link>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link href="/formula-guide">
+                        <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
+                          <HelpCircle className="w-4 h-4" />
+                          How is this calculated?
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs mb-1">Learn how we track your journey.</p>
+                      <p className="text-xs text-muted-foreground italic">Remember: Progress is personal. There's no right pace — only what feels right for you.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
+              
+              {/* Affirming Supportive Text */}
+              <Card className="mt-4 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                <CardContent className="p-4">
+                  <p className="text-sm text-foreground/80 italic leading-relaxed">
+                    {user?.fullName ? (
+                      <>You're showing up for yourself, {user.fullName.split(' ')[0]} — that matters. Progress isn't linear, and that's okay.</>
+                    ) : (
+                      <>You're showing up for yourself — that matters. Progress isn't linear, and that's okay.</>
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
@@ -252,8 +303,18 @@ export default function Profile() {
                     <TrendingUp className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 w-full">
-                    <p className="text-xs uppercase tracking-wider text-blue-600 font-semibold mb-1">Current Streak</p>
+                    <p className="text-xs uppercase tracking-wider text-blue-600 font-semibold mb-1">Self-care streak</p>
                     <h3 className="text-2xl font-bold text-blue-900 break-words">5 Days</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-[10px] text-blue-600/70 mt-1 cursor-help">Your personal pace matters</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Every day you show up is meaningful. There's no right pace — only what feels right for you.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>
@@ -264,8 +325,18 @@ export default function Profile() {
                     <Award className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 w-full">
-                    <p className="text-xs uppercase tracking-wider text-purple-600 font-semibold mb-1">Total Badges</p>
-                    <h3 className="text-2xl font-bold text-purple-900 break-words">8 Earned</h3>
+                    <p className="text-xs uppercase tracking-wider text-purple-600 font-semibold mb-1">Moments of growth</p>
+                    <h3 className="text-2xl font-bold text-purple-900 break-words">8 Moments</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-[10px] text-purple-600/70 mt-1 cursor-help">Each one matters</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">These represent moments you've invested in yourself. Every small step counts.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>
@@ -276,12 +347,77 @@ export default function Profile() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 w-full">
-                    <p className="text-xs uppercase tracking-wider text-green-600 font-semibold mb-1">Total Practice</p>
-                    <h3 className="text-2xl font-bold text-green-900 break-words">12.5 Hrs</h3>
+                    <p className="text-xs uppercase tracking-wider text-green-600 font-semibold mb-1">Time invested in you</p>
+                    <h3 className="text-2xl font-bold text-green-900 break-words">12.5 Hours</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-[10px] text-green-600/70 mt-1 cursor-help">Your wellbeing journey</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">This is time you've dedicated to caring for yourself. Every moment is valuable.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Next Gentle Step Section */}
+            <Card className="bg-gradient-to-br from-orange-50 via-peach-50 to-amber-50 border-orange-100 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-serif flex items-center gap-2 text-orange-900">
+                  <Heart className="w-5 h-5 text-orange-600" />
+                  Today's gentle suggestion
+                </CardTitle>
+                <CardDescription className="text-orange-700">Choose what feels right for you — all optional</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid md:grid-cols-3 gap-3">
+                  <Link href="/chatbot">
+                    <Button variant="outline" className="w-full justify-start gap-3 h-auto py-4 bg-white/80 hover:bg-white border-gray-200 hover:border-orange-300 transition-all">
+                      <MessageSquare className="w-5 h-5 text-gray-700" />
+                      <div className="text-left">
+                        <div className="font-semibold text-sm text-gray-900">Continue your chat</div>
+                        <div className="text-xs text-gray-600">Pick up where you left off</div>
+                      </div>
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-3 h-auto py-4 bg-white/80 hover:bg-white border-gray-200 hover:border-orange-300 transition-all"
+                    onClick={() => {
+                      toast({
+                        title: "Take a moment",
+                        description: "Breathe in for 4 counts, hold for 4, breathe out for 4. Repeat 3 times.",
+                        duration: 5000,
+                      });
+                    }}
+                  >
+                    <Flower className="w-5 h-5 text-gray-700" />
+                    <div className="text-left">
+                      <div className="font-semibold text-sm text-gray-900">Quick breathing</div>
+                      <div className="text-xs text-gray-600">A few moments of calm</div>
+                    </div>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-3 h-auto py-4 bg-white/80 hover:bg-white border-gray-200 hover:border-orange-300 transition-all"
+                    onClick={() => setIsJournalOpen(true)}
+                  >
+                    <PenLine className="w-5 h-5 text-gray-700" />
+                    <div className="text-left">
+                      <div className="font-semibold text-sm text-gray-900">One journal line</div>
+                      <div className="text-xs text-gray-600">Just a thought or feeling</div>
+                    </div>
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 italic text-center pt-3">
+                  These are suggestions, not requirements. Listen to what you need today.
+                </p>
+              </CardContent>
+            </Card>
 
             <Card className="relative overflow-hidden border-none shadow-lg bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50" data-testid="did-you-know-section">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />

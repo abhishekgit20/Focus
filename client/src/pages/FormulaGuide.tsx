@@ -11,6 +11,12 @@ export default function FormulaGuide() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold font-serif mb-2">Progress Calculation Guide</h1>
           <p className="text-muted-foreground">Transparency in how we track your mental wellness journey.</p>
+          <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <p className="text-sm text-foreground/80 italic">
+              <strong className="not-italic">Remember:</strong> Progress is deeply personal. There's no right pace, no target to meet, and no comparison to others. 
+              These numbers simply reflect your journey — every small step forward is meaningful, and it's okay to take breaks when you need them.
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-6">

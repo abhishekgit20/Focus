@@ -20,25 +20,31 @@ import heroBg1 from "@assets/generated_images/indian_wellness_scene_with_yoga_gu
 import heroBg2 from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
 import heroBg3 from "@assets/generated_images/psychologist_counseling_client_with_yoga_background.png";
 
-// Eager load core pages for instant navigation
+// Eager load only critical pages for instant navigation
 import Home from "@/pages/Home";
 import Services from "@/pages/Services";
 import Therapists from "@/pages/Therapists";
-import Profile from "@/pages/Profile";
 
-// Lazy load less critical pages
+// Lazy load all other pages for better performance
 const Chatbot = lazy(() => import("@/pages/Chatbot"));
 const Login = lazy(() => import("@/pages/Login"));
+const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
+const Register = lazy(() => import("@/pages/Register"));
 const Recommendations = lazy(() => import("@/pages/Recommendations"));
-import About from "@/pages/About";
-import Feedback from "@/pages/Feedback";
-import FormulaGuide from "@/pages/FormulaGuide";
-import PartnerWithUs from "@/pages/PartnerWithUs";
-import WalletPage from "@/pages/Wallet";
-import ProfessionalDashboard from "@/pages/ProfessionalDashboard";
-import Consultation from "@/pages/Consultation";
-import ProfessionalChat from "@/pages/ProfessionalChat";
-import NotFound from "@/pages/not-found";
+const ResourceDetail = lazy(() => import("@/pages/ResourceDetail"));
+const ReadsDetail = lazy(() => import("@/pages/ReadsDetail"));
+const About = lazy(() => import("@/pages/About"));
+const Feedback = lazy(() => import("@/pages/Feedback"));
+const FormulaGuide = lazy(() => import("@/pages/FormulaGuide"));
+const PartnerWithUs = lazy(() => import("@/pages/PartnerWithUs"));
+const PartnerWithUsOrganizations = lazy(() => import("@/pages/PartnerWithUsOrganizations"));
+const WalletPage = lazy(() => import("@/pages/Wallet"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const ProfessionalDashboard = lazy(() => import("@/pages/ProfessionalDashboard"));
+const AdminFeedback = lazy(() => import("@/pages/AdminFeedback"));
+const Consultation = lazy(() => import("@/pages/Consultation"));
+const ProfessionalChat = lazy(() => import("@/pages/ProfessionalChat"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageLoader() {
   return (
@@ -59,14 +65,20 @@ function Router() {
           <Route path="/services" component={Services} />
           <Route path="/therapists" component={Therapists} />
           <Route path="/recommendations" component={Recommendations} />
+          <Route path="/recommendations/:id" component={ResourceDetail} />
+          <Route path="/reads/:id" component={ReadsDetail} />
           <Route path="/about" component={About} />
           <Route path="/feedback" component={Feedback} />
           <Route path="/chatbot" component={Chatbot} />
           <Route path="/login" component={Login} />
+          <Route path="/admin/login" component={AdminLogin} />
+          <Route path="/register" component={Register} />
           <Route path="/profile" component={Profile} />
           <Route path="/partner" component={PartnerWithUs} />
+          <Route path="/partner-with-us" component={PartnerWithUsOrganizations} />
           <Route path="/wallet" component={WalletPage} />
           <Route path="/professional-dashboard" component={ProfessionalDashboard} />
+          <Route path="/admin/feedback" component={AdminFeedback} />
           <Route path="/formula-guide" component={FormulaGuide} />
           <Route path="/consultation/:professionalId/:type" component={Consultation} />
           <Route path="/professional-chat/:sessionId" component={ProfessionalChat} />

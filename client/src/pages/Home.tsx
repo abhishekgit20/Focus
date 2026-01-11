@@ -4,10 +4,12 @@ import { Link } from "wouter";
 import heroBg1 from "@assets/generated_images/indian_wellness_scene_with_yoga_guru,_therapist_and_clients.png";
 import heroBg2 from "@assets/generated_images/yoga_guru_teaching_meditation_with_counselor_present.png";
 import heroBg3 from "@assets/generated_images/psychologist_counseling_client_with_yoga_background.png";
-import { Heart, Sparkles, Shield, Flower, Users, IndianRupee, Quote, MessageCircle } from "lucide-react";
+import { Heart, Sparkles, Shield, Flower, Users, IndianRupee, Quote, MessageCircle, BookOpen, Calendar, ArrowRight } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { CrisisBanner } from "@/components/CrisisBanner";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 const HERO_VIDEOS = [
   "https://videos.pexels.com/video-files/7211161/7211161-uhd_2560_1440_30fps.mp4", // Stream in nature
@@ -46,6 +48,43 @@ const DAILY_VERSES = [
   }
 ];
 
+interface Testimonial {
+  id: string;
+  name: string | null;
+  role: string | null;
+  feedbackText: string;
+  rating: number;
+  createdAt: string;
+}
+
+// Default testimonials to ensure we always have 3 stories
+const DEFAULT_TESTIMONIALS: Testimonial[] = [
+  {
+    id: "default-1",
+    name: "Priya",
+    role: "Student",
+    feedbackText: "Focus has been a lifeline during my toughest times. The combination of therapy and yoga sessions helped me manage my anxiety in ways I never thought possible. The therapists are compassionate and understanding.",
+    rating: 5,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "default-2",
+    name: "Rajesh",
+    role: "Professional",
+    feedbackText: "As someone who struggled with work-related stress, Focus provided me with practical tools and support. The mindfulness sessions and professional guidance have transformed how I handle daily challenges.",
+    rating: 5,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "default-3",
+    name: "Anita",
+    role: "Parent",
+    feedbackText: "The accessibility and affordability of Focus made mental health support possible for my family. The multi-language support and flexible scheduling fit perfectly into our busy lives. Truly grateful for this platform.",
+    rating: 5,
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
@@ -53,14 +92,54 @@ export default function Home() {
   const [imageSrc, setImageSrc] = useState(heroBg1);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [todaysVerse, setTodaysVerse] = useState(DAILY_VERSES[0]);
-  
-  // Parallax effects
-  const heroY = useTransform(scrollY, [0, 500], [0, 200]);
-  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
-  
-  const textY = useTransform(scrollY, [0, 300], [0, 100]);
-  const textOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const queryClient = useQueryClient();
 
+  // Fetch testimonials using React Query for better caching
+  const { data: testimonialsData, isLoading: isLoadingTestimonials } = useQuery<{ testimonials: Testimonial[] }>({
+    queryKey: ["/api/testimonials"],
+    queryFn: async () => {
+      const response = await fetch("/api/testimonials");
+      if (!response.ok) throw new Error("Failed to fetch testimonials");
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1,
+  });
+
+  // Memoize testimonials processing
+  const testimonials = useMemo(() => {
+    const fetchedTestimonials = testimonialsData?.testimonials || [];
+    let finalTestimonials = [...fetchedTestimonials];
+    
+    if (finalTestimonials.length < 3) {
+      const needed = 3 - finalTestimonials.length;
+      const defaultsToAdd = DEFAULT_TESTIMONIALS.slice(0, needed);
+      finalTestimonials = [...finalTestimonials, ...defaultsToAdd];
+    } else {
+      finalTestimonials = finalTestimonials.slice(0, 3);
+    }
+    
+    return finalTestimonials;
+  }, [testimonialsData]);
+
+  // Clear cached user data if localStorage indicates user is logged out
+  useEffect(() => {
+    const isLoggedInLocal = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedInLocal && user) {
+      // localStorage says logged out but we have cached user data - clear it
+      queryClient.setQueryData(["/api/auth/user"], null);
+    }
+  }, [user, queryClient]);
+  
+  // Parallax effects - memoized to prevent recalculation
+  const heroY = useTransform(scrollY, [0, 500], [0, 200], { clamp: true });
+  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0], { clamp: true });
+  
+  const textY = useTransform(scrollY, [0, 300], [0, 100], { clamp: true });
+  const textOpacity = useTransform(scrollY, [0, 300], [1, 0], { clamp: true });
+
+  // Initialize random content once on mount
   useEffect(() => {
     // Randomly select a video AND image on mount
     const randomVideoIndex = Math.floor(Math.random() * HERO_VIDEOS.length);
@@ -72,6 +151,44 @@ export default function Home() {
     // Random verse
     const randomVerseIndex = Math.floor(Math.random() * DAILY_VERSES.length);
     setTodaysVerse(DAILY_VERSES[randomVerseIndex]);
+
+    // Handle OAuth success redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('oauth_success') === 'true') {
+      // Fetch user data and update localStorage
+      fetch("/api/auth/user", { credentials: "include" })
+        .then((res) => res.json())
+        .then((user) => {
+          if (user && user.id) {
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userRole', user.role || 'client');
+            localStorage.setItem('userName', user.fullName || 'User');
+            localStorage.setItem('userEmail', user.email || '');
+            window.dispatchEvent(new Event('auth-change'));
+            // Redirect based on role
+            setTimeout(() => {
+              if (user.role === 'admin') {
+                window.location.href = '/admin/feedback';
+              } else if (user.role === 'professional') {
+                window.location.href = '/professional-dashboard';
+              } else {
+                window.location.href = '/profile';
+              }
+            }, 500);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch user after OAuth:", error);
+        });
+      // Remove query param
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Memoized helper function to truncate text
+  const truncateText = useCallback((text: string, maxLength: number = 200) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength).trim() + "...";
   }, []);
 
   return (
@@ -107,10 +224,14 @@ export default function Home() {
                 muted 
                 loop 
                 playsInline
-                preload="auto"
+                preload="metadata" // Changed from "auto" to reduce initial load
                 onCanPlay={() => {
-                  // Keep the image visible for 5 seconds before fading in the video
-                  setTimeout(() => setIsVideoLoaded(true), 5000);
+                  // Keep the image visible for 3 seconds before fading in the video (reduced from 5)
+                  setTimeout(() => setIsVideoLoaded(true), 3000);
+                }}
+                onError={() => {
+                  // If video fails to load, keep image visible
+                  setIsVideoLoaded(false);
                 }}
                 className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-[2000ms] ease-in-out ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
               />
@@ -123,29 +244,68 @@ export default function Home() {
             className="container mx-auto px-4 relative z-20 text-center"
           >
             <div className="max-w-4xl mx-auto">
-              <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white font-medium mb-6 backdrop-blur-sm border border-white/30 shadow-sm">
-                Integrated Mental Health for India
-              </span>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-xl filter">
-                Ancient Wisdom Meets <br />
-                <span className="text-orange-300 italic">Modern Care</span>
-              </h1>
-              <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
-                Connect with verified psychiatrists, therapists, and yoga gurus. 
-                Experience holistic healing with our Bhagavad Gita-inspired AI guide.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/therapists">
-                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all border-none">
-                    Find Professionals
-                  </Button>
-                </Link>
-                <Link href="/chatbot">
-                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none">
-                    Chat with Gita Bot
-                  </Button>
-                </Link>
-              </div>
+              {!isAuthLoading && isAuthenticated && user && user.id ? (
+                // Logged-in experience - supportive tone
+                <>
+                  <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white font-medium mb-6 backdrop-blur-sm border border-white/30 shadow-sm">
+                    Welcome back
+                  </span>
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-xl filter">
+                    Welcome back, {user.fullName?.split(' ')[0] || 'there'} <br />
+                    <span className="text-orange-300 italic text-3xl md:text-5xl lg:text-6xl">How are you feeling today?</span>
+                  </h1>
+                  <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
+                    Take a moment to check in with yourself. We're here to support you on your journey.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Link href="/chatbot">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all border-none gap-2">
+                        <MessageCircle className="w-5 h-5" />
+                        Continue Your Chat
+                      </Button>
+                    </Link>
+                    <Link href="/therapists">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm border border-white/30 shadow-lg hover:shadow-xl transition-all gap-2">
+                        <Calendar className="w-5 h-5" />
+                        Book a Session
+                      </Button>
+                    </Link>
+                    <Link href="/profile">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm border border-white/30 shadow-lg hover:shadow-xl transition-all gap-2">
+                        <ArrowRight className="w-5 h-5" />
+                        My Journey
+                      </Button>
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                // Public experience - marketing tone
+                <>
+                  <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white font-medium mb-6 backdrop-blur-sm border border-white/30 shadow-sm">
+                    Integrated Mental Health for India
+                  </span>
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-xl filter">
+                    Ancient Wisdom Meets <br />
+                    <span className="text-orange-300 italic">Modern Care</span>
+                  </h1>
+                  <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
+                    Connect with verified psychiatrists, therapists, and yoga gurus. 
+                    Experience holistic healing with our Bhagavad Gita-inspired AI guide.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Link href="/therapists">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all border-none">
+                        Find Professionals
+                      </Button>
+                    </Link>
+                    <Link href="/chatbot">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none">
+                        Chat with Gita Bot
+                      </Button>
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         </section>
@@ -226,7 +386,6 @@ export default function Home() {
                 "{todaysVerse.text}"
               </blockquote>
               <cite className="text-lg font-medium text-primary not-italic block mb-8">— {todaysVerse.source}</cite>
-              <Button variant="outline" className="rounded-full">Read More Verses</Button>
             </div>
           </div>
         </section>
@@ -239,51 +398,48 @@ export default function Home() {
               <p className="text-muted-foreground text-lg">Real people, real recovery.</p>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  quote: "I was hesitant to seek help, but Focus made it so easy to find a therapist who understood my cultural background.",
-                  author: "Priya S.",
-                  loc: "Mumbai",
-                  role: "Software Engineer"
-                },
-                {
-                  quote: "The combination of Yoga and therapy changed my life. I finally feel at peace with myself.",
-                  author: "Rahul M.",
-                  loc: "Bangalore",
-                  role: "Student"
-                },
-                {
-                  quote: "Being from a small town, I never thought I could access top psychiatrists. Focus made it possible.",
-                  author: "Anita K.",
-                  loc: "Indore",
-                  role: "Teacher"
-                }
-              ].map((testimonial, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05, duration: 0.4 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  className="bg-muted/30 p-8 rounded-3xl border relative flex flex-col h-full"
-                >
-                  <Quote className="w-10 h-10 text-primary/40 mb-4" />
-                  <p className="text-lg mb-6 text-foreground font-medium italic relative z-10 flex-grow leading-relaxed">"{testimonial.quote}"</p>
-                  <div>
-                    <h4 className="font-bold text-foreground">{testimonial.author}</h4>
-                    <p className="text-sm text-muted-foreground font-medium">{testimonial.role}, {testimonial.loc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="text-center mt-12">
-              <Link href="/feedback">
-                <Button variant="outline" className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary gap-2">
-                  <MessageCircle className="w-4 h-4" /> Share Your Story
-                </Button>
-              </Link>
-            </div>
+            {isLoadingTestimonials ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading testimonials...</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid md:grid-cols-3 gap-8">
+                  {testimonials.map((testimonial, i) => (
+                    <motion.div 
+                      key={testimonial.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05, duration: 0.4 }}
+                      viewport={{ once: true, margin: "-50px" }}
+                      className="bg-muted/30 p-8 rounded-3xl border relative flex flex-col h-full"
+                    >
+                      <Quote className="w-10 h-10 text-primary/40 mb-4" />
+                      <p className="text-lg mb-6 text-foreground font-medium italic relative z-10 flex-grow leading-relaxed">
+                        "{truncateText(testimonial.feedbackText)}"
+                      </p>
+                      <div>
+                        <h4 className="font-bold text-foreground">
+                          {testimonial.name || "Anonymous"}
+                        </h4>
+                        {testimonial.role && (
+                          <p className="text-sm text-muted-foreground font-medium">
+                            {testimonial.role}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                <div className="text-center mt-12">
+                  <Link href="/feedback">
+                    <Button variant="outline" className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary gap-2">
+                      <MessageCircle className="w-4 h-4" /> Share Your Story
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </section>
 

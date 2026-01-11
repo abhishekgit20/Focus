@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { requireAuth, requireClient, requireProfessional } from "./auth";
+import { requireAuth, requireClient, requireProfessional, requireAdmin } from "./auth";
 import passport from "passport";
+import bcrypt from "bcryptjs";
 import { generateChatResponse, generateJournalInsights, analyzeMood } from "./ai";
 import {
   insertUserSchema,
@@ -11,11 +12,18 @@ import {
   insertJournalEntrySchema,
   insertChatMessageSchema,
   insertReviewSchema,
+  insertFeedbackSchema,
+  insertDailyCheckInSchema,
+  insertMicroPracticeSchema,
+  insertCommunityChallengeSchema,
+  insertChallengeParticipantSchema,
+  insertVoiceMessageSchema,
   type User,
 } from "@shared/schema";
 import { z } from "zod";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { getRazorpayClient, getRazorpayKeyId, verifyPaymentSignature } from "./razorpayClient";
+import { testConnection } from "./db";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -46,30 +54,115 @@ export async function registerRoutes(
       if (!email || !password || !fullName) {
         return res.status(400).json({ error: "Email, password and full name are required" });
       }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Please enter a valid email address" });
+      }
+
+      // Password validation
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      }
+
+      // Quick database connection check
+      const isConnected = await testConnection().catch(() => false);
+      if (!isConnected) {
+        return res.status(503).json({ 
+          error: "Database unavailable",
+          message: "The database is currently unavailable. Please try again in a few moments."
+        });
+      }
       
-      const existingUser = await storage.getUserByEmail(email);
+      // Check if user exists with retry logic
+      let existingUser;
+      const maxRetries = 3;
+      let retryCount = 0;
+      
+      while (retryCount < maxRetries) {
+        try {
+          existingUser = await storage.getUserByEmail(email);
+          break; // Success, exit retry loop
+        } catch (dbError: any) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.error("Database connection error after retries:", dbError);
+            return res.status(503).json({ 
+              error: "Database connection issue",
+              message: "Unable to connect to the database. Please try again in a moment or contact support if the problem persists."
+            });
+          }
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
       
       const hashedPassword = await bcrypt.hash(password, 10);
       
-      const user = await storage.createUser({
-        email,
-        password: hashedPassword,
-        fullName,
-        role: role || 'client',
-      });
+      // Create user with retry logic
+      let user;
+      retryCount = 0;
       
+      while (retryCount < maxRetries) {
+        try {
+          user = await storage.createUser({
+            email,
+            password: hashedPassword,
+            fullName,
+            role: role || 'client',
+          });
+          break; // Success, exit retry loop
+        } catch (dbError: any) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.error("Database connection error creating user:", dbError);
+            return res.status(503).json({ 
+              error: "Database connection issue",
+              message: "Unable to create account due to database connection issue. Please try again in a moment."
+            });
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+      
+      if (!user) {
+        return res.status(500).json({ error: "Failed to create user account" });
+      }
+      
+      // Create wallet for client with retry logic
       if (user.role === 'client') {
-        await storage.createWallet({ userId: user.id, balance: "0", totalRecharged: "0" });
+        retryCount = 0;
+        while (retryCount < maxRetries) {
+          try {
+            await storage.createWallet({ userId: user.id, balance: "0", totalRecharged: "0" });
+            break;
+          } catch (dbError: any) {
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              console.error("Failed to create wallet, but user was created:", dbError);
+              // Don't fail registration if wallet creation fails - user can still use the app
+            } else {
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            }
+          }
+        }
       }
       
       if (user.role === 'professional' && req.body.professionalProfile) {
-        await storage.createProfessionalProfile({
-          ...req.body.professionalProfile,
-          userId: user.id,
-        });
+        try {
+          await storage.createProfessionalProfile({
+            ...req.body.professionalProfile,
+            userId: user.id,
+          });
+        } catch (profileError) {
+          console.error("Failed to create professional profile:", profileError);
+          // Don't fail registration if profile creation fails
+        }
       }
       
       res.json({ 
@@ -80,11 +173,28 @@ export async function registerRoutes(
           fullName: user.fullName,
         } 
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid input", details: error.errors });
       }
-      next(error);
+
+      // Check for database connection errors
+      if (error.message?.includes('timeout') || error.message?.includes('Connection terminated') || error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+        return res.status(503).json({ 
+          error: "Database connection issue",
+          message: "Unable to connect to the database. Please check your internet connection and try again. If the problem persists, the database server may be temporarily unavailable."
+        });
+      }
+
+      // Generic error
+      return res.status(500).json({ 
+        error: "Registration failed",
+        message: process.env.NODE_ENV === 'development' 
+          ? error.message 
+          : "An error occurred during registration. Please try again."
+      });
     }
   });
 
@@ -112,6 +222,95 @@ export async function registerRoutes(
         });
       });
     })(req, res, next);
+  });
+
+  // Google OAuth routes
+  app.get("/api/auth/google", (req, res, next) => {
+    // Check if Google OAuth is configured
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      console.warn("Google OAuth not configured - GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing");
+      return res.redirect("/login?error=google_not_configured");
+    }
+    try {
+      passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+    } catch (error: any) {
+      console.error("Google OAuth authentication error:", error);
+      if (error.message?.includes('Unknown authentication strategy') || error.message?.includes('google')) {
+        return res.redirect("/login?error=google_not_configured");
+      }
+      return res.redirect("/login?error=google_auth_failed");
+    }
+  });
+
+  app.get(
+    "/api/auth/google/callback",
+    (req, res, next) => {
+      // Check if Google OAuth is configured
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        return res.redirect("/login?error=google_not_configured");
+      }
+      passport.authenticate("google", { failureRedirect: "/login?error=google_auth_failed" })(req, res, next);
+    },
+    async (req: any, res) => {
+      try {
+        const user = req.user as User;
+        if (!user) {
+          return res.redirect("/login?error=google_auth_failed");
+        }
+        // User is now authenticated via session
+        // Redirect to home with success flag
+        res.redirect("/?oauth_success=true");
+      } catch (error) {
+        console.error("Google callback error:", error);
+        res.redirect("/login?error=google_auth_failed");
+      }
+    }
+  );
+
+  // Apple OAuth routes (Sign in with Apple)
+  app.get("/api/auth/apple", (req, res) => {
+    // Apple Sign In requires client-side implementation
+    // This endpoint will be called from the frontend after Apple authentication
+    const { id_token, user } = req.query;
+    
+    if (!id_token) {
+      return res.redirect("/login?error=apple_auth_failed");
+    }
+
+    // For now, redirect to a handler that will process the token
+    // In production, you'd verify the JWT token from Apple
+    res.redirect(`/api/auth/apple/callback?id_token=${id_token}&user=${encodeURIComponent(JSON.stringify(user || {}))}`);
+  });
+
+  app.get("/api/auth/apple/callback", async (req: any, res) => {
+    try {
+      // Note: In production, you should verify the Apple JWT token
+      // For now, this is a placeholder that shows the flow
+      const { id_token, user } = req.query;
+      
+      if (!id_token) {
+        return res.redirect("/login?error=apple_auth_failed");
+      }
+
+      // Parse user data if provided
+      let userData: any = {};
+      if (user) {
+        try {
+          userData = JSON.parse(decodeURIComponent(user as string));
+        } catch (e) {
+          console.error("Error parsing Apple user data:", e);
+        }
+      }
+
+      // In production, decode and verify the JWT token from Apple
+      // For now, we'll create a placeholder user flow
+      // You'll need to implement proper JWT verification using Apple's public keys
+      
+      res.redirect("/login?error=apple_not_configured");
+    } catch (error) {
+      console.error("Apple callback error:", error);
+      res.redirect("/login?error=apple_auth_failed");
+    }
   });
 
   // Logout user
@@ -175,6 +374,20 @@ export async function registerRoutes(
     }
   });
   
+  // Get current professional's profile
+  app.get("/api/professional/profile", requireProfessional, async (req, res, next) => {
+    try {
+      const user = req.user as User;
+      const profile = await storage.getProfessionalProfile(user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Professional profile not found" });
+      }
+      res.json({ profile, user });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Update professional availability
   app.patch("/api/professionals/availability", requireProfessional, async (req, res, next) => {
     try {
@@ -711,22 +924,399 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== PARTNER INQUIRY (NO AUTH REQUIRED) ====================
+  
+  app.post("/api/partner-inquiry", async (req, res, next) => {
+    try {
+      const {
+        organizationName,
+        contactPerson,
+        email,
+        phone,
+        organizationType,
+        partnershipInterests,
+        message,
+      } = req.body;
+
+      // Basic validation
+      if (!organizationName || !contactPerson || !email || !phone || !organizationType) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Please fill in all required fields",
+        });
+      }
+
+      if (!Array.isArray(partnershipInterests) || partnershipInterests.length === 0) {
+        return res.status(400).json({
+          error: "Partnership interests required",
+          message: "Please select at least one partnership interest",
+        });
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          error: "Invalid email",
+          message: "Please provide a valid email address",
+        });
+      }
+
+      // TODO: Store in database or send to email service
+      // For now, just log and return success
+      console.log("Partner Inquiry Received:", {
+        organizationName,
+        contactPerson,
+        email,
+        phone,
+        organizationType,
+        partnershipInterests,
+        message: message || "(no message provided)",
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({
+        success: true,
+        message: "Thank you for your interest! We'll contact you within 48 hours.",
+      });
+    } catch (error: any) {
+      console.error("Partner inquiry error:", error);
+      res.status(500).json({
+        error: "Failed to submit inquiry",
+        message: "There was an error processing your inquiry. Please try again later.",
+      });
+    }
+  });
+
   // ==================== PUBLIC CHAT (NO AUTH REQUIRED) ====================
   
   app.post("/api/public-chat", async (req, res, next) => {
     try {
       const { message, conversationHistory = [] } = req.body;
       
-      if (!message) {
-        return res.status(400).json({ error: "Message is required" });
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ 
+          error: "Message is required",
+          response: "I'd be happy to help, but I didn't receive your message. Could you please try sending it again?"
+        });
       }
 
-      const result = await generateChatResponse(message, conversationHistory);
+      // Validate conversationHistory format if provided
+      if (conversationHistory && !Array.isArray(conversationHistory)) {
+        return res.status(400).json({ error: "conversationHistory must be an array" });
+      }
+
+      const result = await generateChatResponse(message.trim(), conversationHistory);
       
       res.json(result);
-    } catch (error) {
-      console.error("Public chat error:", error);
-      next(error);
+    } catch (error: any) {
+      console.error("Public chat error:", {
+        message: error?.message,
+        stack: error?.stack
+      });
+      
+      // Return a user-friendly error response instead of throwing
+      res.status(500).json({
+        response: "I'm experiencing technical difficulties. Please try again in a moment, or reach out to a professional therapist if you need immediate support.",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // ==================== FEEDBACK ROUTES ====================
+  
+  // Submit feedback (requires authentication)
+  app.post("/api/feedback", requireClient, async (req: any, res, next) => {
+    try {
+      // Validate request body using Zod schema
+      const validationResult = insertFeedbackSchema.safeParse({
+        name: req.body.name?.trim() || null,
+        role: req.body.role?.trim() || null,
+        rating: typeof req.body.rating === 'string' ? parseInt(req.body.rating, 10) : req.body.rating,
+        feedbackText: req.body.feedbackText?.trim(),
+        featuresUsed: Array.isArray(req.body.featuresUsed) ? req.body.featuresUsed : [],
+        showOnHomepage: Boolean(req.body.showOnHomepage),
+        status: "pending",
+      });
+
+      if (!validationResult.success) {
+        return res.status(400).json({
+          error: "Validation failed",
+          message: validationResult.error.errors.map(e => e.message).join(", "),
+          details: validationResult.error.errors,
+        });
+      }
+
+      // Additional validation for rating range
+      if (validationResult.data.rating < 1 || validationResult.data.rating > 5) {
+        return res.status(400).json({
+          error: "Invalid rating",
+          message: "Rating must be between 1 and 5",
+        });
+      }
+
+      // Validate feedback text is not empty
+      if (!validationResult.data.feedbackText || validationResult.data.feedbackText.trim().length === 0) {
+        return res.status(400).json({
+          error: "Invalid feedback",
+          message: "Feedback text cannot be empty",
+        });
+      }
+
+      // Create feedback
+      const feedbackData = {
+        ...validationResult.data,
+        status: "pending" as const,
+      };
+
+      const created = await storage.createFeedback(feedbackData);
+
+      res.json({
+        success: true,
+        message: "Thank you for your feedback! Your insights help us improve Focus for everyone.",
+        feedback: created,
+      });
+    } catch (error: any) {
+      console.error("Feedback submission error:", error);
+      
+      // Handle database errors
+      if (error.code === '23505') { // Unique constraint violation
+        return res.status(409).json({
+          error: "Duplicate feedback",
+          message: "You have already submitted this feedback.",
+        });
+      }
+
+      // Handle other database errors
+      if (error.code && error.code.startsWith('23')) {
+        return res.status(400).json({
+          error: "Database validation error",
+          message: "There was an issue with the data you provided. Please check your input and try again.",
+        });
+      }
+
+      res.status(500).json({
+        error: "Failed to submit feedback",
+        message: "There was an error processing your feedback. Please try again later.",
+      });
+    }
+  });
+
+  // Get approved testimonials for homepage (public endpoint)
+  app.get("/api/testimonials", async (req, res, next) => {
+    try {
+      const testimonials = await storage.getApprovedTestimonials();
+      res.json({ testimonials });
+    } catch (error: any) {
+      console.error("Get testimonials error:", error);
+      res.status(500).json({
+        error: "Failed to fetch testimonials",
+        testimonials: [],
+      });
+    }
+  });
+
+  // Admin: Get all feedback (requires admin authentication)
+  app.get("/api/admin/feedback", requireAdmin, async (req: any, res, next) => {
+    try {
+      const allFeedback = await storage.getAllFeedback();
+      res.json({ feedback: allFeedback });
+    } catch (error: any) {
+      console.error("Get all feedback error:", error);
+      res.status(500).json({
+        error: "Failed to fetch feedback",
+        feedback: [],
+      });
+    }
+  });
+
+  // Admin: Update feedback status (approve/reject)
+  app.patch("/api/admin/feedback/:id/status", requireAdmin, async (req: any, res, next) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status || !['pending', 'approved', 'rejected'].includes(status)) {
+        return res.status(400).json({
+          error: "Invalid status",
+          message: "Status must be 'pending', 'approved', or 'rejected'",
+        });
+      }
+
+      const updated = await storage.updateFeedbackStatus(id, status);
+
+      if (!updated) {
+        return res.status(404).json({
+          error: "Feedback not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Feedback ${status} successfully`,
+        feedback: updated,
+      });
+    } catch (error: any) {
+      console.error("Update feedback status error:", error);
+      res.status(500).json({
+        error: "Failed to update feedback status",
+        message: "There was an error updating the feedback status.",
+      });
+    }
+  });
+
+  // ==================== DAILY CHECK-IN ROUTES ====================
+  
+  // Create daily check-in
+  app.post("/api/check-in", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const validated = insertDailyCheckInSchema.parse({
+        ...req.body,
+        userId: user.id,
+      });
+      
+      const checkIn = await storage.createDailyCheckIn(validated);
+      res.json({ success: true, checkIn });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid check-in data", details: error.errors });
+      }
+      console.error("Create check-in error:", error);
+      res.status(500).json({ error: "Failed to create check-in" });
+    }
+  });
+
+  // Get today's check-in
+  app.get("/api/check-in/today", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const checkIn = await storage.getTodayCheckIn(user.id);
+      res.json({ checkIn });
+    } catch (error: any) {
+      console.error("Get today check-in error:", error);
+      res.status(500).json({ error: "Failed to fetch check-in" });
+    }
+  });
+
+  // Get recent check-ins
+  app.get("/api/check-in/recent", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const days = parseInt(req.query.days as string) || 7;
+      const checkIns = await storage.getRecentCheckIns(user.id, days);
+      res.json({ checkIns });
+    } catch (error: any) {
+      console.error("Get recent check-ins error:", error);
+      res.status(500).json({ error: "Failed to fetch check-ins" });
+    }
+  });
+
+  // ==================== MICRO-PRACTICES ROUTES ====================
+  
+  // Complete a micro-practice
+  app.post("/api/micro-practice", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const validated = insertMicroPracticeSchema.parse({
+        ...req.body,
+        userId: user.id,
+      });
+      
+      const practice = await storage.createMicroPractice(validated);
+      res.json({ success: true, practice });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid practice data", details: error.errors });
+      }
+      console.error("Create micro-practice error:", error);
+      res.status(500).json({ error: "Failed to record practice" });
+    }
+  });
+
+  // Get user's micro-practices
+  app.get("/api/micro-practices", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const days = parseInt(req.query.days as string) || 30;
+      const practices = await storage.getUserMicroPractices(user.id, days);
+      res.json({ practices });
+    } catch (error: any) {
+      console.error("Get micro-practices error:", error);
+      res.status(500).json({ error: "Failed to fetch practices" });
+    }
+  });
+
+  // ==================== COMMUNITY CHALLENGES ROUTES ====================
+  
+  // Get active challenges
+  app.get("/api/challenges", requireAuth, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const challenges = await storage.getUserChallenges(user.id);
+      res.json({ challenges });
+    } catch (error: any) {
+      console.error("Get challenges error:", error);
+      res.status(500).json({ error: "Failed to fetch challenges" });
+    }
+  });
+
+  // Join a challenge
+  app.post("/api/challenges/:id/join", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const { id } = req.params;
+      const participant = await storage.joinChallenge(id, user.id);
+      res.json({ success: true, participant });
+    } catch (error: any) {
+      console.error("Join challenge error:", error);
+      res.status(500).json({ error: "Failed to join challenge" });
+    }
+  });
+
+  // Get challenge participant count (anonymous)
+  app.get("/api/challenges/:id/participants", async (req: any, res, next) => {
+    try {
+      const { id } = req.params;
+      const count = await storage.getChallengeParticipantCount(id);
+      res.json({ count });
+    } catch (error: any) {
+      console.error("Get challenge participants error:", error);
+      res.status(500).json({ error: "Failed to fetch participant count" });
+    }
+  });
+
+  // ==================== VOICE MESSAGES ROUTES ====================
+  
+  // Create voice message
+  app.post("/api/voice-message", requireClient, async (req: any, res, next) => {
+    try {
+      const user = req.user as User;
+      const validated = insertVoiceMessageSchema.parse({
+        ...req.body,
+        userId: user.id,
+      });
+      
+      const message = await storage.createVoiceMessage(validated);
+      res.json({ success: true, message });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid voice message data", details: error.errors });
+      }
+      console.error("Create voice message error:", error);
+      res.status(500).json({ error: "Failed to save voice message" });
+    }
+  });
+
+  // Get voice messages for a conversation
+  app.get("/api/voice-messages/:conversationId", requireClient, async (req: any, res, next) => {
+    try {
+      const { conversationId } = req.params;
+      const messages = await storage.getVoiceMessages(conversationId);
+      res.json({ messages });
+    } catch (error: any) {
+      console.error("Get voice messages error:", error);
+      res.status(500).json({ error: "Failed to fetch voice messages" });
     }
   });
 

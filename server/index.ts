@@ -2,6 +2,8 @@
 import "dotenv/config";
 
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { setupAuth } from "./auth";
@@ -12,6 +14,19 @@ import { parse } from "url";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Security and performance middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? false : true),
+  credentials: true,
+}));
+
+// Compression middleware for better performance
+app.use(compression());
+
+// Request size limit (10MB)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // WebSocket Server for real-time chat
 const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
@@ -138,7 +153,7 @@ async function initStripe() {
 
 app.post(
   '/api/stripe/webhook',
-  express.raw({ type: 'application/json' }),
+  express.raw({ type: 'application/json', limit: '10mb' }),
   async (req, res) => {
     const signature = req.headers['stripe-signature'];
     if (!signature) {
@@ -167,15 +182,16 @@ app.post(
   }
 );
 
+// Note: JSON parsing is already configured above with compression
+// This is for webhook routes that need raw body
 app.use(
+  '/api/stripe/webhook',
   express.json({
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
-
-app.use(express.urlencoded({ extended: false }));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -226,8 +242,19 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Log error for debugging (but don't expose details in production)
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error:", err);
+    } else {
+      log(`Error ${status}: ${message}`, "error");
+    }
+
+    res.status(status).json({ 
+      message: process.env.NODE_ENV === "production" 
+        ? "Internal Server Error" 
+        : message 
+    });
+    // Don't throw - error already handled
   });
 
   // importantly only setup vite in development and after

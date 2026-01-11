@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { storage } from "./storage";
 import type { Express } from "express";
 import session from "express-session";
@@ -64,6 +65,54 @@ export function setupAuth(app: Express) {
     )
   );
 
+  // Configure Google OAuth strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/google/callback`,
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            const email = profile.emails?.[0]?.value;
+            if (!email) {
+              return done(new Error("No email found in Google profile"), null);
+            }
+
+            // Check if user exists
+            let user = await storage.getUserByEmail(email);
+
+            if (!user) {
+              // Create new user
+              user = await storage.createUser({
+                email,
+                fullName: profile.displayName || profile.name?.givenName || "User",
+                role: 'client', // Default to client, can be changed later
+                profileImage: profile.photos?.[0]?.value,
+              });
+
+              // Create wallet for client
+              await storage.createWallet({
+                userId: user.id,
+                balance: "0",
+                totalRecharged: "0",
+              });
+            } else if (!user.profileImage && profile.photos?.[0]?.value) {
+              // Update profile image if missing
+              // Note: You may need to add an updateUser method to storage
+            }
+
+            return done(null, user);
+          } catch (error) {
+            return done(error, null);
+          }
+        }
+      )
+    );
+  }
+
   passport.serializeUser((user: Express.User, done) => {
     done(null, (user as User).id);
   });
@@ -97,10 +146,18 @@ export function requireProfessional(req: any, res: any, next: any) {
   res.status(403).json({ error: "Forbidden - Professional access required" });
 }
 
-// Middleware to check if user has client role
-export function requireClient(req: any, res: any, next: any) {
-  if (req.isAuthenticated() && (req.user as User).role === 'client') {
-    return next();
+  // Middleware to check if user has client role
+  export function requireClient(req: any, res: any, next: any) {
+    if (req.isAuthenticated() && (req.user as User).role === 'client') {
+      return next();
+    }
+    res.status(403).json({ error: "Forbidden - Client access required" });
   }
-  res.status(403).json({ error: "Forbidden - Client access required" });
-}
+
+  // Middleware to check if user has admin role
+  export function requireAdmin(req: any, res: any, next: any) {
+    if (req.isAuthenticated() && (req.user as User).role === 'admin') {
+      return next();
+    }
+    res.status(403).json({ error: "Forbidden - Admin access required" });
+  }
