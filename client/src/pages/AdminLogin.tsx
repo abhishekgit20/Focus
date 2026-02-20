@@ -36,20 +36,9 @@ export default function AdminLogin() {
         return;
       }
       
-      // Store auth state in localStorage
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userRole', response.user.role);
-      localStorage.setItem('userName', response.user.fullName);
-      localStorage.setItem('userEmail', response.user.email);
-      
-      if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-      }
-      
-      window.dispatchEvent(new Event('auth-change'));
-      
-      // Invalidate auth query to refetch user data
+      // Invalidate auth query to refetch user data from server
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      window.dispatchEvent(new Event('auth-change'));
       
       toast.success(`Welcome, ${response.user.fullName}!`);
       

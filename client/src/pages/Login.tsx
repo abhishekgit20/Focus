@@ -28,6 +28,12 @@ export default function Login() {
       toast.error("Google login is not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.");
     } else if (error === 'google_auth_failed') {
       toast.error("Google authentication failed. Please try again or use email and password.");
+    } else if (error === 'role_mismatch') {
+      const expected = urlParams.get('expected');
+      const actual = urlParams.get('actual');
+      toast.error(
+        `Invalid role for this login. This account is registered as a ${actual}. Please use the ${actual === 'professional' ? 'professional' : 'client'} login page.`
+      );
     }
     // Clean up URL
     if (error) {
@@ -40,17 +46,21 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const response = await login(email, password);
+      const expectedRole = isProfessional ? 'professional' : 'client';
+      const response = await login(email, password, expectedRole);
       
-      // Store auth state in localStorage
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userRole', response.user.role);
-      localStorage.setItem('userName', response.user.fullName);
-      localStorage.setItem('userEmail', response.user.email);
-      window.dispatchEvent(new Event('auth-change'));
+      // Validate role matches expected role (double-check on frontend)
+      if (response.user.role !== expectedRole) {
+        setIsLoading(false);
+        toast.error(
+          `Invalid role for this login. This account is registered as a ${response.user.role}. Please use the ${response.user.role === 'professional' ? 'professional' : 'client'} login page.`
+        );
+        return;
+      }
       
-      // Invalidate auth query to refetch user data
+      // Invalidate auth query to refetch user data from server
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      window.dispatchEvent(new Event('auth-change'));
       
       toast.success(`Welcome back, ${response.user.fullName}!`);
       
@@ -68,7 +78,12 @@ export default function Login() {
         window.location.href = redirectPath;
       }, 500);
     } catch (error: any) {
-      toast.error(error.message || "Login failed. Please check your credentials.");
+      // Handle role mismatch error specifically
+      if (error.message?.includes('Invalid role') || error.message?.includes('role for this login')) {
+        toast.error(error.message || "Invalid role for this login. Please use the correct login page.");
+      } else {
+        toast.error(error.message || "Login failed. Please check your credentials.");
+      }
       setIsLoading(false);
     }
   };
@@ -211,8 +226,9 @@ export default function Login() {
                 variant="outline" 
                 className="h-12 px-0 rounded-xl border-muted-foreground/20 hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/40 transition-all gap-2 text-sm font-medium text-muted-foreground"
                 onClick={() => {
-                  // Redirect to Google OAuth - server will handle configuration check
-                  window.location.href = "/api/auth/google";
+                  // Redirect to Google OAuth with expected role - server will handle configuration check
+                  const expectedRole = isProfessional ? 'professional' : 'client';
+                  window.location.href = `/api/auth/google?role=${expectedRole}`;
                 }}
                 data-testid="button-google-login"
               >

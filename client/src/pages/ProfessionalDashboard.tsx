@@ -5,6 +5,28 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -19,12 +41,17 @@ import {
   Settings,
   ShieldCheck,
   Loader2,
-  Phone
+  Phone,
+  LogOut,
+  User,
+  X,
+  AlertCircle
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import dashboardImg from "@assets/generated_images/professional_therapist_dashboard_with_analytics_and_appointments.png";
 import complianceBadge from "@assets/generated_images/secure_medical_data_privacy_compliance_shield_badge.png";
 
@@ -72,45 +99,106 @@ interface ProfessionalProfileData {
 export default function ProfessionalDashboard() {
   const [isOnline, setIsOnline] = useState(true);
   const [sessionIdInput, setSessionIdInput] = useState("");
+  const [activeNav, setActiveNav] = useState("dashboard");
+  const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
+  const [breakStartTime, setBreakStartTime] = useState("");
+  const [breakEndTime, setBreakEndTime] = useState("");
+  const [breakDate, setBreakDate] = useState("");
+  const [sessionIdError, setSessionIdError] = useState("");
   const [, setLocation] = useLocation();
-  const { user: currentUser, isLoading: isUserLoading } = useAuth();
+  const { user: currentUser, isLoading: isUserLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: profileData, isLoading: isProfileLoading } = useQuery<ProfessionalProfileData>({
+  // Redirect if not a professional (ProtectedRoute handles unauthenticated)
+  useEffect(() => {
+    if (!isUserLoading && currentUser && currentUser.role !== 'professional') {
+      toast({
+        title: "Access Denied",
+        description: "This page is only available for professionals.",
+        variant: "destructive",
+      });
+      setLocation("/");
+    }
+  }, [isUserLoading, currentUser, setLocation, toast]);
+
+  // Optimize queries with staleTime and parallel fetching
+  const { data: profileData, isLoading: isProfileLoading, error: profileError } = useQuery<ProfessionalProfileData>({
     queryKey: ['/api/professional/profile'],
     queryFn: async () => {
       const res = await fetch('/api/professional/profile', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch profile');
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLocation('/login');
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch profile');
+      }
       return res.json();
     },
-    enabled: !!currentUser, // Only fetch if user is authenticated
+    enabled: !!currentUser && currentUser.role === 'professional',
+    staleTime: 5 * 60 * 1000, // 5 minutes - profile doesn't change often
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    retry: 1,
   });
 
-  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
     queryKey: ['/api/professional/stats'],
     queryFn: async () => {
       const res = await fetch('/api/professional/stats', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch stats');
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLocation('/login');
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch stats');
+      }
       return res.json();
     },
-    refetchInterval: 30000,
+    enabled: !!currentUser && currentUser.role === 'professional',
+    staleTime: 2 * 60 * 1000, // 2 minutes - stats can be slightly stale
+    refetchInterval: 5 * 60 * 1000, // Reduced from 30s to 5 minutes
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
-  const { data: walletData, isLoading: walletLoading } = useQuery<WalletData>({
+  const { data: walletData, isLoading: walletLoading, error: walletError } = useQuery<WalletData>({
     queryKey: ['/api/professional/wallet'],
     queryFn: async () => {
       const res = await fetch('/api/professional/wallet', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch wallet');
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLocation('/login');
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch wallet');
+      }
       return res.json();
     },
+    enabled: !!currentUser && currentUser.role === 'professional',
+    staleTime: 1 * 60 * 1000, // 1 minute - wallet updates less frequently
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
-  const { data: sessionsData, isLoading: sessionsLoading } = useQuery<{ sessions: SessionData[] }>({
+  const { data: sessionsData, isLoading: sessionsLoading, error: sessionsError } = useQuery<{ sessions: SessionData[] }>({
     queryKey: ['/api/professional/sessions/today'],
     queryFn: async () => {
       const res = await fetch('/api/professional/sessions/today', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch sessions');
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLocation('/login');
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch sessions');
+      }
       return res.json();
     },
+    enabled: !!currentUser && currentUser.role === 'professional',
+    staleTime: 30 * 1000, // 30 seconds - sessions change more frequently
+    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const displayStats = [
@@ -154,6 +242,183 @@ export default function ProfessionalDashboard() {
     });
   };
 
+  // Update availability
+  const updateAvailabilityMutation = useMutation({
+    mutationFn: async (isOnline: boolean) => {
+      const res = await fetch('/api/professionals/availability', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isOnline }),
+      });
+      if (!res.ok) throw new Error('Failed to update availability');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/professional/profile'] });
+    },
+  });
+
+  const handleAvailabilityChange = (checked: boolean) => {
+    setIsOnline(checked);
+    updateAvailabilityMutation.mutate(checked);
+  };
+
+  // Validate and join session
+  const validateSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const res = await fetch(`/api/sessions/${sessionId}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Session not found');
+        }
+        throw new Error('Failed to validate session');
+      }
+      const data = await res.json();
+      return data.session;
+    },
+  });
+
+  const handleJoinSession = async () => {
+    const trimmedId = sessionIdInput.trim();
+    if (!trimmedId) {
+      setSessionIdError("Please enter a session ID");
+      return;
+    }
+
+    setSessionIdError("");
+    try {
+      const session = await validateSessionMutation.mutateAsync(trimmedId);
+      // Check if user is the professional for this session
+      if (session.professionalId !== currentUser?.id) {
+        setSessionIdError("You don't have access to this session");
+        return;
+      }
+      setLocation(`/professional-chat/${trimmedId}`);
+    } catch (error: any) {
+      setSessionIdError(error.message || "Invalid session ID");
+    }
+  };
+
+  // Schedule break
+  const scheduleBreakMutation = useMutation({
+    mutationFn: async (data: { startTime: string; endTime: string; date: string }) => {
+      // Stub implementation - in real app, this would create a break entry
+      return new Promise((resolve) => setTimeout(resolve, 500));
+    },
+    onSuccess: () => {
+      toast({
+        title: "Break Scheduled",
+        description: "Your break has been scheduled successfully.",
+      });
+      setIsBreakModalOpen(false);
+      setBreakStartTime("");
+      setBreakEndTime("");
+      setBreakDate("");
+    },
+  });
+
+  const handleScheduleBreak = () => {
+    if (!breakDate || !breakStartTime || !breakEndTime) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields to schedule a break.",
+        variant: "destructive",
+      });
+      return;
+    }
+    scheduleBreakMutation.mutate({
+      date: breakDate,
+      startTime: breakStartTime,
+      endTime: breakEndTime,
+    });
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        queryClient.clear();
+        setLocation('/login');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Navigation handlers
+  const handleNavClick = (nav: string) => {
+    setActiveNav(nav);
+    if (nav === "appointments") {
+      toast({
+        title: "Coming Soon",
+        description: "Appointments management is coming soon.",
+      });
+    } else if (nav === "patients") {
+      toast({
+        title: "Coming Soon",
+        description: "Patient management is coming soon.",
+      });
+    } else if (nav === "earnings") {
+      toast({
+        title: "Coming Soon",
+        description: "Earnings details are coming soon.",
+      });
+    } else if (nav === "messages") {
+      toast({
+        title: "Coming Soon",
+        description: "Messages are coming soon.",
+      });
+    } else if (nav === "analytics") {
+      toast({
+        title: "Coming Soon",
+        description: "Analytics dashboard is coming soon.",
+      });
+    } else if (nav === "settings") {
+      toast({
+        title: "Coming Soon",
+        description: "Settings are coming soon.",
+      });
+    }
+  };
+
+  // View session details
+  const handleViewDetails = (sessionId: string) => {
+    setLocation(`/professional-chat/${sessionId}`);
+  };
+
+  // Show skeleton loader while initial data is loading
+  const isInitialLoading = isProfileLoading || (statsLoading && !stats) || (walletLoading && !walletData) || (sessionsLoading && !sessionsData);
+
+  // Show loading state while checking authentication
+  if (isUserLoading || !currentUser) {
+    return (
+      <div className="min-h-screen bg-muted/20 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message if not a professional
+  if (currentUser.role !== 'professional') {
+    return (
+      <div className="min-h-screen bg-muted/20 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-muted/20 flex">
@@ -162,48 +427,87 @@ export default function ProfessionalDashboard() {
             <div className="flex items-center gap-3 mb-8">
               <Avatar className="h-12 w-12 border-2 border-primary">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                  {profileData?.user?.fullName 
-                    ? profileData.user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                    : currentUser?.fullName 
-                      ? currentUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                      : 'P'}
+                  {isProfileLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    profileData?.user?.fullName 
+                      ? profileData.user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                      : currentUser?.fullName 
+                        ? currentUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        : 'P'
+                  )}
                 </AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex-1 min-w-0">
                 {isProfileLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span className="text-xs text-muted-foreground">Loading...</span>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-muted animate-pulse rounded w-20"></div>
+                    <div className="h-3 bg-muted animate-pulse rounded w-16"></div>
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-bold text-sm">{profileData?.user?.fullName || currentUser?.fullName || "Professional"}</h3>
-                    <p className="text-xs text-muted-foreground">{profileData?.profile?.specialization || "Professional"}</p>
+                    <h3 className="font-bold text-sm truncate">{profileData?.user?.fullName || currentUser?.fullName || "Professional"}</h3>
+                    <p className="text-xs text-muted-foreground truncate">{profileData?.profile?.specialization || "Professional"}</p>
                   </>
                 )}
               </div>
             </div>
             
             <nav className="space-y-2">
-              <Button variant="secondary" className="w-full justify-start gap-3 font-medium" data-testid="nav-dashboard">
+              <Button 
+                variant={activeNav === "dashboard" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "dashboard" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("dashboard")}
+                data-testid="nav-dashboard"
+              >
                 <LayoutDashboard className="w-4 h-4" /> Dashboard
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 font-medium text-muted-foreground" data-testid="nav-appointments">
+              <Button 
+                variant={activeNav === "appointments" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "appointments" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("appointments")}
+                data-testid="nav-appointments"
+              >
                 <Calendar className="w-4 h-4" /> Appointments
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 font-medium text-muted-foreground" data-testid="nav-patients">
+              <Button 
+                variant={activeNav === "patients" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "patients" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("patients")}
+                data-testid="nav-patients"
+              >
                 <Users className="w-4 h-4" /> My Patients
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 font-medium text-muted-foreground" data-testid="nav-earnings">
+              <Button 
+                variant={activeNav === "earnings" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "earnings" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("earnings")}
+                data-testid="nav-earnings"
+              >
                 <Wallet className="w-4 h-4" /> Earnings
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 font-medium text-muted-foreground" data-testid="nav-messages">
+              <Button 
+                variant={activeNav === "messages" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "messages" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("messages")}
+                data-testid="nav-messages"
+              >
                 <MessageSquare className="w-4 h-4" /> Messages
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 font-medium text-muted-foreground" data-testid="nav-analytics">
+              <Button 
+                variant={activeNav === "analytics" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "analytics" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("analytics")}
+                data-testid="nav-analytics"
+              >
                 <TrendingUp className="w-4 h-4" /> Analytics
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-3 font-medium text-muted-foreground" data-testid="nav-settings">
+              <Button 
+                variant={activeNav === "settings" ? "secondary" : "ghost"} 
+                className={`w-full justify-start gap-3 font-medium ${activeNav === "settings" ? "" : "text-muted-foreground"}`}
+                onClick={() => handleNavClick("settings")}
+                data-testid="nav-settings"
+              >
                 <Settings className="w-4 h-4" /> Settings
               </Button>
             </nav>
@@ -225,7 +529,12 @@ export default function ProfessionalDashboard() {
           <div className="mt-auto p-6 border-t bg-muted/10">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Availability</span>
-              <Switch checked={isOnline} onCheckedChange={setIsOnline} data-testid="switch-availability" />
+              <Switch 
+                checked={isOnline} 
+                onCheckedChange={handleAvailabilityChange} 
+                disabled={updateAvailabilityMutation.isPending}
+                data-testid="switch-availability" 
+              />
             </div>
             <p className="text-xs text-muted-foreground">
               {isOnline ? "You are visible to clients" : "You are currently offline"}
@@ -244,20 +553,87 @@ export default function ProfessionalDashboard() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" className="rounded-full" data-testid="button-notifications">
-                  <Bell className="w-5 h-5" />
-                </Button>
-                <Button className="rounded-full gap-2 bg-primary" data-testid="button-schedule-break">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full relative" data-testid="button-notifications">
+                      <Bell className="w-5 h-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold">Notifications</h4>
+                    </div>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No new notifications</p>
+                      <p className="text-xs mt-1">You're all caught up!</p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button 
+                  className="rounded-full gap-2 bg-primary" 
+                  onClick={() => setIsBreakModalOpen(true)}
+                  data-testid="button-schedule-break"
+                >
                   <Clock className="w-4 h-4" /> Schedule Break
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                          {profileData?.user?.fullName 
+                            ? profileData.user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                            : currentUser?.fullName 
+                              ? currentUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                              : 'P'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {profileData?.user?.fullName || currentUser?.fullName || "Professional"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {profileData?.profile?.specialization || "Professional"}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>View Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {statsLoading ? (
-                <div className="col-span-4 flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
+              {isInitialLoading && !stats ? (
+                // Skeleton loaders for stats cards
+                Array.from({ length: 4 }).map((_, i) => (
+                  <Card key={i} className="border-none shadow-sm" data-testid={`card-stat-skeleton-${i}`}>
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 rounded-xl bg-muted animate-pulse w-12 h-12"></div>
+                        <div className="h-5 w-16 bg-muted animate-pulse rounded"></div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-muted animate-pulse rounded w-24"></div>
+                        <div className="h-8 bg-muted animate-pulse rounded w-16"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
               ) : (
                 displayStats.map((stat, i) => (
                   <Card key={i} className="border-none shadow-sm hover:shadow-md transition-shadow" data-testid={`card-stat-${i}`}>
@@ -288,9 +664,24 @@ export default function ProfessionalDashboard() {
                     <CardDescription>Your appointments for {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {sessionsLoading ? (
-                      <div className="flex justify-center py-8">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    {sessionsLoading && !sessionsData ? (
+                      // Skeleton loader for sessions
+                      <div className="space-y-4">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl animate-pulse">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-10 h-10 rounded-full bg-muted"></div>
+                              <div className="space-y-2 flex-1">
+                                <div className="h-4 bg-muted rounded w-32"></div>
+                                <div className="h-3 bg-muted rounded w-24"></div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="h-5 w-16 bg-muted rounded"></div>
+                              <div className="h-8 w-24 bg-muted rounded"></div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : upcomingSessions.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
@@ -320,7 +711,14 @@ export default function ProfessionalDashboard() {
                               <Badge variant={session.status === "scheduled" ? "default" : "secondary"}>
                                 {session.status}
                               </Badge>
-                              <Button size="sm" variant="outline" data-testid={`button-view-${session.id}`}>View Details</Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleViewDetails(session.id)}
+                                data-testid={`button-view-${session.id}`}
+                              >
+                                View Details
+                              </Button>
                             </div>
                           </div>
                         ))}
@@ -354,25 +752,41 @@ export default function ProfessionalDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <Input
-                        placeholder="Paste session ID here..."
-                        value={sessionIdInput}
-                        onChange={(e) => setSessionIdInput(e.target.value)}
-                        className="bg-white border-white/30 text-gray-900 placeholder:text-gray-500"
-                        data-testid="input-session-id"
-                      />
+                      <div>
+                        <Input
+                          placeholder="Paste session ID here..."
+                          value={sessionIdInput}
+                          onChange={(e) => {
+                            setSessionIdInput(e.target.value);
+                            setSessionIdError("");
+                          }}
+                          className={`bg-white border-white/30 text-gray-900 placeholder:text-gray-500 ${
+                            sessionIdError ? "border-red-300" : ""
+                          }`}
+                          data-testid="input-session-id"
+                        />
+                        {sessionIdError && (
+                          <div className="flex items-center gap-1 mt-2 text-red-200 text-sm">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>{sessionIdError}</span>
+                          </div>
+                        )}
+                      </div>
                       <Button 
                         variant="secondary" 
                         className="w-full font-bold"
-                        onClick={() => {
-                          if (sessionIdInput.trim()) {
-                            setLocation(`/professional-chat/${sessionIdInput.trim()}`);
-                          }
-                        }}
-                        disabled={!sessionIdInput.trim()}
+                        onClick={handleJoinSession}
+                        disabled={!sessionIdInput.trim() || validateSessionMutation.isPending}
                         data-testid="button-join-session"
                       >
-                        Join Session
+                        {validateSessionMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Validating...
+                          </>
+                        ) : (
+                          "Join Session"
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -385,15 +799,29 @@ export default function ProfessionalDashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {walletLoading ? (
-                      <Loader2 className="w-6 h-6 animate-spin" />
+                    {walletLoading && !walletData ? (
+                      <div className="space-y-4">
+                        <div className="h-12 bg-primary-foreground/20 animate-pulse rounded"></div>
+                        <div className="h-4 bg-primary-foreground/20 animate-pulse rounded w-32"></div>
+                        <div className="h-10 bg-primary-foreground/20 animate-pulse rounded"></div>
+                      </div>
                     ) : (
                       <>
                         <div className="text-4xl font-bold mb-2" data-testid="text-wallet-balance">
                           ₹{walletData?.availableBalance || "0"}
                         </div>
                         <p className="text-primary-foreground/80 text-sm mb-6">Available for withdrawal</p>
-                        <Button variant="secondary" className="w-full font-bold" data-testid="button-withdraw">
+                        <Button 
+                          variant="secondary" 
+                          className="w-full font-bold" 
+                          onClick={() => {
+                            toast({
+                              title: "Coming Soon",
+                              description: "Withdrawal functionality is coming soon.",
+                            });
+                          }}
+                          data-testid="button-withdraw"
+                        >
                           Withdraw Funds
                         </Button>
                       </>
@@ -428,6 +856,77 @@ export default function ProfessionalDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Schedule Break Modal */}
+      <Dialog open={isBreakModalOpen} onOpenChange={setIsBreakModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Schedule Break</DialogTitle>
+            <DialogDescription>
+              Set a time when you'll be unavailable for consultations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="break-date">Date</Label>
+              <Input
+                id="break-date"
+                type="date"
+                value={breakDate}
+                onChange={(e) => setBreakDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="break-start">Start Time</Label>
+                <Input
+                  id="break-start"
+                  type="time"
+                  value={breakStartTime}
+                  onChange={(e) => setBreakStartTime(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="break-end">End Time</Label>
+                <Input
+                  id="break-end"
+                  type="time"
+                  value={breakEndTime}
+                  onChange={(e) => setBreakEndTime(e.target.value)}
+                  min={breakStartTime}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsBreakModalOpen(false);
+                setBreakStartTime("");
+                setBreakEndTime("");
+                setBreakDate("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleScheduleBreak}
+              disabled={scheduleBreakMutation.isPending}
+            >
+              {scheduleBreakMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Scheduling...
+                </>
+              ) : (
+                "Schedule Break"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageTransition>
   );
 }

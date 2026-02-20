@@ -8,10 +8,12 @@ import { PageTransition } from "@/components/PageTransition";
 import { Eye, EyeOff, Mail, ArrowLeft, Loader2, Shield } from "lucide-react";
 import { register } from "@/lib/api";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import heroBg from "@assets/generated_images/therapist_and_client_session.png";
 
 export default function Register() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -48,11 +50,8 @@ export default function Register() {
         role: isProfessional ? "professional" : "client",
       });
 
-      // Store auth state in localStorage
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userRole', response.user.role);
-      localStorage.setItem('userName', response.user.fullName);
-      localStorage.setItem('userEmail', response.user.email);
+      // Invalidate auth query to refetch user data from server
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       window.dispatchEvent(new Event('auth-change'));
 
       toast.success(`Welcome to Focus, ${response.user.fullName}!`);

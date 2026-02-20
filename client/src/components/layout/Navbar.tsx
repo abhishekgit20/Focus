@@ -18,37 +18,16 @@ import {
 export function Navbar() {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState('client');
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // Check initial state
-    const checkAuth = () => {
-      setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
-      setUserRole(localStorage.getItem('userRole') || 'client');
-    };
-    checkAuth();
-
-    // Listen for login/logout events
-    window.addEventListener('auth-change', checkAuth);
-    return () => window.removeEventListener('auth-change', checkAuth);
-  }, []);
 
   const handleLogout = async () => {
     try {
-      // Call logout API to clear server session
+      // Call logout API to clear server session and cookie
       await logout();
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear localStorage
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userEmail');
-      
       // Invalidate auth query to clear cached user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.setQueryData(["/api/auth/user"], null);
@@ -69,7 +48,7 @@ export function Navbar() {
     { href: "/therapists", label: "Professionals" },
     { href: "/recommendations", label: "Reads" },
     // Only show "For Professionals" if not logged in
-    ...(!isLoggedIn ? [{ href: "/partner", label: "For Professionals" }] : []),
+    ...(!isAuthenticated ? [{ href: "/partner", label: "For Professionals" }] : []),
     { href: "/about", label: "About" },
   ];
 
@@ -98,7 +77,7 @@ export function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <DropdownMenu onOpenChange={(open) => {
               if (open) window.dispatchEvent(new Event('hide-crisis-banner'));
             }}>
@@ -108,19 +87,17 @@ export function Navbar() {
                     <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                       {user?.fullName 
                         ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                        : localStorage.getItem('userName')
-                          ? localStorage.getItem('userName')!.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-                          : 'U'}
+                        : 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {userRole === 'admin' ? (
+                {user?.role === 'admin' ? (
                   <Link href="/admin/feedback">
                     <DropdownMenuItem className="cursor-pointer">Admin Dashboard</DropdownMenuItem>
                   </Link>
-                ) : userRole === 'professional' ? (
+                ) : user?.role === 'professional' ? (
                   <Link href="/professional-dashboard">
                     <DropdownMenuItem className="cursor-pointer">Professional Dashboard</DropdownMenuItem>
                   </Link>
@@ -169,13 +146,13 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <>
-              {userRole === 'admin' ? (
+              {user?.role === 'admin' ? (
                 <Link href="/admin/feedback" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
                   Admin Dashboard
                 </Link>
-              ) : userRole === 'professional' ? (
+              ) : user?.role === 'professional' ? (
                 <Link href="/professional-dashboard" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
                   Dashboard
                 </Link>

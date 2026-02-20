@@ -11,18 +11,38 @@ import { createServer } from "http";
 import { WebhookHandlers } from './webhookHandlers';
 import { WebSocketServer, WebSocket } from "ws";
 import { parse } from "url";
+import { validateEnv } from "./env";
+import { securityHeaders, requestId, sanitizeInput } from "./middleware/security";
+import { collectMetrics, getMetrics } from "./middleware/monitoring";
+import { errorHandler } from "./middleware/errorHandler";
+
+// Validate environment variables first
+validateEnv();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Security headers (must be early in middleware chain)
+app.use(securityHeaders);
+
+// Request ID tracking
+app.use(requestId);
+
+// Input sanitization
+app.use(sanitizeInput);
 
 // Security and performance middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? false : true),
   credentials: true,
+  optionsSuccessStatus: 200,
 }));
 
 // Compression middleware for better performance
 app.use(compression());
+
+// Metrics collection
+app.use(collectMetrics);
 
 // Request size limit (10MB)
 app.use(express.json({ limit: '10mb' }));
@@ -219,8 +239,21 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      
+      // Sanitize logged responses - remove sensitive data
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const sanitized = { ...capturedJsonResponse };
+        // Remove sensitive fields from logs
+        delete sanitized.password;
+        delete sanitized.token;
+        delete sanitized.secret;
+        delete sanitized.apiKey;
+        delete sanitized.accessToken;
+        delete sanitized.refreshToken;
+        // Only log if not too large
+        if (JSON.stringify(sanitized).length < 500) {
+          logLine += ` :: ${JSON.stringify(sanitized)}`;
+        }
       }
 
       log(logLine);
@@ -231,6 +264,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Validate required environment variables in production
+  if (process.env.NODE_ENV === "production") {
+    const requiredVars = ["DATABASE_URL", "SESSION_SECRET"];
+    const missing = requiredVars.filter(v => !process.env[v]);
+    if (missing.length > 0) {
+      console.error(`❌ Missing required environment variables: ${missing.join(", ")}`);
+      console.error("Application cannot start in production without these variables.");
+      process.exit(1);
+    }
+  }
+
   // Trust proxy for correct IP and protocol detection behind reverse proxies
   app.set("trust proxy", 1);
   
@@ -238,24 +282,37 @@ app.use((req, res, next) => {
   await setupAuth(app);
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    // Log error for debugging (but don't expose details in production)
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error:", err);
-    } else {
-      log(`Error ${status}: ${message}`, "error");
+  // Health check endpoint (must be before error handler)
+  app.get("/health", async (_req, res) => {
+    try {
+      // Quick database check
+      const dbHealthy = await testConnection().catch(() => false);
+      
+      res.status(dbHealthy ? 200 : 503).json({
+        status: dbHealthy ? "healthy" : "unhealthy",
+        timestamp: new Date().toISOString(),
+        database: dbHealthy ? "connected" : "disconnected",
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+      });
     }
-
-    res.status(status).json({ 
-      message: process.env.NODE_ENV === "production" 
-        ? "Internal Server Error" 
-        : message 
-    });
-    // Don't throw - error already handled
   });
+
+  // Metrics endpoint (protected in production)
+  app.get("/metrics", (req, res) => {
+    // In production, you might want to add authentication here
+    if (process.env.NODE_ENV === "production" && !req.headers.authorization) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    res.json(getMetrics());
+  });
+
+  // Use enhanced error handler (must be last middleware)
+  app.use(errorHandler);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
@@ -270,6 +327,25 @@ app.use((req, res, next) => {
   // Serve the app on the port specified in the environment variable PORT
   // Default to 5000 if not specified
   const port = parseInt(process.env.PORT || "5000", 10);
+  
+  // Graceful shutdown handling
+  const gracefulShutdown = (signal: string) => {
+    log(`Received ${signal}, starting graceful shutdown...`, "server");
+    httpServer.close(() => {
+      log("HTTP server closed", "server");
+      process.exit(0);
+    });
+
+    // Force shutdown after 10 seconds
+    setTimeout(() => {
+      log("Forcing shutdown after timeout", "server");
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
   httpServer.listen(port, "0.0.0.0", () => {
     log(`Server running on port ${port}`);
     if (process.env.NODE_ENV === "production") {

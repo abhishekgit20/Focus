@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Target, TrendingUp, AlertTriangle } from "lucide-react";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-export default function About() {
+function AboutContent() {
   return (
     <PageTransition>
       <div className="relative">
@@ -100,5 +101,13 @@ export default function About() {
       </div>
     </div>
     </PageTransition>
+  );
+}
+
+export default function About() {
+  return (
+    <ProtectedRoute>
+      <AboutContent />
+    </ProtectedRoute>
   );
 }

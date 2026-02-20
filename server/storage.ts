@@ -451,6 +451,27 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
 
+  // Stripe payment tracking for idempotency
+  async getStripePaymentByPaymentId(stripePaymentId: string): Promise<WalletTransaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.stripePaymentId, stripePaymentId));
+    return transaction || undefined;
+  }
+
+  async getStripePaymentBySessionId(stripeSessionId: string): Promise<WalletTransaction | undefined> {
+    // Check if we've already processed this Stripe session
+    // We'll use the description field to store session ID temporarily
+    const transactions = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.type, "recharge"));
+    
+    // Find transaction with matching session ID in description
+    return transactions.find(t => t.description?.includes(`Session: ${stripeSessionId}`)) || undefined;
+  }
+
   // Feedback operations
   async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
     const [created] = await db.insert(feedback).values({

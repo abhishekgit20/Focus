@@ -10,6 +10,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/ChatWidget";
 import { SplashScreen } from "@/components/SplashScreen";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Loader2 } from "lucide-react";
 
 // Images to preload
@@ -77,7 +78,11 @@ function Router() {
           <Route path="/partner" component={PartnerWithUs} />
           <Route path="/partner-with-us" component={PartnerWithUsOrganizations} />
           <Route path="/wallet" component={WalletPage} />
-          <Route path="/professional-dashboard" component={ProfessionalDashboard} />
+          <Route path="/professional-dashboard">
+            <ProtectedRoute>
+              <ProfessionalDashboard />
+            </ProtectedRoute>
+          </Route>
           <Route path="/admin/feedback" component={AdminFeedback} />
           <Route path="/formula-guide" component={FormulaGuide} />
           <Route path="/consultation/:professionalId/:type" component={Consultation} />

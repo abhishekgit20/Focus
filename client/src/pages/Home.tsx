@@ -123,14 +123,6 @@ export default function Home() {
     return finalTestimonials;
   }, [testimonialsData]);
 
-  // Clear cached user data if localStorage indicates user is logged out
-  useEffect(() => {
-    const isLoggedInLocal = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedInLocal && user) {
-      // localStorage says logged out but we have cached user data - clear it
-      queryClient.setQueryData(["/api/auth/user"], null);
-    }
-  }, [user, queryClient]);
   
   // Parallax effects - memoized to prevent recalculation
   const heroY = useTransform(scrollY, [0, 500], [0, 200], { clamp: true });
@@ -160,11 +152,6 @@ export default function Home() {
         .then((res) => res.json())
         .then((user) => {
           if (user && user.id) {
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userRole', user.role || 'client');
-            localStorage.setItem('userName', user.fullName || 'User');
-            localStorage.setItem('userEmail', user.email || '');
-            window.dispatchEvent(new Event('auth-change'));
             // Redirect based on role
             setTimeout(() => {
               if (user.role === 'admin') {
@@ -265,13 +252,13 @@ export default function Home() {
                       </Button>
                     </Link>
                     <Link href="/therapists">
-                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm border border-white/30 shadow-lg hover:shadow-xl transition-all gap-2">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all border-none gap-2">
                         <Calendar className="w-5 h-5" />
                         Book a Session
                       </Button>
                     </Link>
                     <Link href="/profile">
-                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm border border-white/30 shadow-lg hover:shadow-xl transition-all gap-2">
+                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none gap-2">
                         <ArrowRight className="w-5 h-5" />
                         My Journey
                       </Button>
@@ -281,29 +268,29 @@ export default function Home() {
               ) : (
                 // Public experience - marketing tone
                 <>
-                  <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white font-medium mb-6 backdrop-blur-sm border border-white/30 shadow-sm">
-                    Integrated Mental Health for India
-                  </span>
-                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-xl filter">
-                    Ancient Wisdom Meets <br />
-                    <span className="text-orange-300 italic">Modern Care</span>
-                  </h1>
-                  <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
-                    Connect with verified psychiatrists, therapists, and yoga gurus. 
-                    Experience holistic healing with our Bhagavad Gita-inspired AI guide.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Link href="/therapists">
-                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all border-none">
-                        Find Professionals
-                      </Button>
-                    </Link>
-                    <Link href="/chatbot">
-                      <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none">
-                        Chat with Gita Bot
-                      </Button>
-                    </Link>
-                  </div>
+              <span className="inline-block py-1 px-3 rounded-full bg-white/20 text-white font-medium mb-6 backdrop-blur-sm border border-white/30 shadow-sm">
+                Integrated Mental Health for India
+              </span>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-xl filter">
+                Ancient Wisdom Meets <br />
+                <span className="text-orange-300 italic">Modern Care</span>
+              </h1>
+              <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
+                Connect with verified psychiatrists, therapists, and yoga gurus. 
+                Experience holistic healing with our Bhagavad Gita-inspired AI guide.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/therapists">
+                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all border-none">
+                    Find Professionals
+                  </Button>
+                </Link>
+                <Link href="/chatbot">
+                  <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-white/90 text-primary font-bold shadow-lg hover:shadow-xl transition-all border-none">
+                    Chat with Gita Bot
+                  </Button>
+                </Link>
+              </div>
                 </>
               )}
             </div>
@@ -404,21 +391,21 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-8">
                   {testimonials.map((testimonial, i) => (
-                    <motion.div 
+                <motion.div 
                       key={testimonial.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.05, duration: 0.4 }}
-                      viewport={{ once: true, margin: "-50px" }}
-                      className="bg-muted/30 p-8 rounded-3xl border relative flex flex-col h-full"
-                    >
-                      <Quote className="w-10 h-10 text-primary/40 mb-4" />
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05, duration: 0.4 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  className="bg-muted/30 p-8 rounded-3xl border relative flex flex-col h-full"
+                >
+                  <Quote className="w-10 h-10 text-primary/40 mb-4" />
                       <p className="text-lg mb-6 text-foreground font-medium italic relative z-10 flex-grow leading-relaxed">
                         "{truncateText(testimonial.feedbackText)}"
                       </p>
-                      <div>
+                  <div>
                         <h4 className="font-bold text-foreground">
                           {testimonial.name || "Anonymous"}
                         </h4>
@@ -427,17 +414,17 @@ export default function Home() {
                             {testimonial.role}
                           </p>
                         )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="text-center mt-12">
-                  <Link href="/feedback">
-                    <Button variant="outline" className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary gap-2">
-                      <MessageCircle className="w-4 h-4" /> Share Your Story
-                    </Button>
-                  </Link>
-                </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <div className="text-center mt-12">
+              <Link href="/feedback">
+                <Button variant="outline" className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary gap-2">
+                  <MessageCircle className="w-4 h-4" /> Share Your Story
+                </Button>
+              </Link>
+            </div>
               </>
             )}
           </div>

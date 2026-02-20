@@ -73,7 +73,7 @@ export default function Feedback() {
     }
 
     setIsSubmitting(true);
-
+    
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",

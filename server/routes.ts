@@ -24,6 +24,10 @@ import { z } from "zod";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { getRazorpayClient, getRazorpayKeyId, verifyPaymentSignature } from "./razorpayClient";
 import { testConnection } from "./db";
+import { authLimiter, signupLimiter, oauthLimiter, aiLimiter, paymentLimiter, apiLimiter } from "./rateLimiter";
+import { db } from "./db";
+import { paymentOrders } from "@shared/schema";
+import { eq, and, gte } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -32,13 +36,13 @@ export async function registerRoutes(
   
   // ==================== AUTH ROUTES ====================
   
-  // Get current user
-  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
+  // Get current user (returns null if not authenticated - for frontend to check auth status)
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const user = req.user as User;
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      if (!req.isAuthenticated() || !req.user) {
+        return res.status(401).json(null);
       }
+      const user = req.user as User;
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -47,7 +51,7 @@ export async function registerRoutes(
   });
 
   // Register new user (for email/password registration)
-  app.post("/api/auth/register", async (req, res, next) => {
+  app.post("/api/auth/register", signupLimiter, async (req, res, next) => {
     try {
       const { email, password, fullName, role } = req.body;
       
@@ -199,7 +203,9 @@ export async function registerRoutes(
   });
 
   // Login user (for email/password login)
-  app.post("/api/auth/login", (req, res, next) => {
+  app.post("/api/auth/login", authLimiter, (req, res, next) => {
+    const { expectedRole } = req.body; // 'client' or 'professional'
+    
     passport.authenticate('local', (err: any, user: User | false, info: any) => {
       if (err) {
         return next(err);
@@ -207,6 +213,15 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ error: info?.message || "Invalid email or password" });
       }
+      
+      // Validate role matches expected role
+      if (expectedRole && user.role !== expectedRole) {
+        return res.status(403).json({ 
+          error: "Invalid role for this login",
+          message: `This account is registered as a ${user.role}. Please use the ${user.role === 'professional' ? 'professional' : 'client'} login page.`
+        });
+      }
+      
       req.logIn(user, (err) => {
         if (err) {
           return next(err);
@@ -225,14 +240,24 @@ export async function registerRoutes(
   });
 
   // Google OAuth routes
-  app.get("/api/auth/google", (req, res, next) => {
+  app.get("/api/auth/google", oauthLimiter, (req, res, next) => {
     // Check if Google OAuth is configured
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       console.warn("Google OAuth not configured - GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing");
       return res.redirect("/login?error=google_not_configured");
     }
+    
+    // Store expected role in session state for validation after OAuth callback
+    const expectedRole = req.query.role as string; // 'client' or 'professional'
+    if (expectedRole && (expectedRole === 'client' || expectedRole === 'professional')) {
+      (req.session as any).oauthExpectedRole = expectedRole;
+    }
+    
     try {
-      passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+      passport.authenticate("google", { 
+        scope: ["profile", "email"],
+        state: expectedRole || undefined, // Pass role in state if provided
+      })(req, res, next);
     } catch (error: any) {
       console.error("Google OAuth authentication error:", error);
       if (error.message?.includes('Unknown authentication strategy') || error.message?.includes('google')) {
@@ -257,6 +282,21 @@ export async function registerRoutes(
         if (!user) {
           return res.redirect("/login?error=google_auth_failed");
         }
+        
+        // Validate role if expected role was set
+        const expectedRole = (req.session as any)?.oauthExpectedRole;
+        if (expectedRole && user.role !== expectedRole) {
+          // Clear session and redirect with error
+          req.logout(() => {
+            delete (req.session as any).oauthExpectedRole;
+            res.redirect(`/login?error=role_mismatch&expected=${expectedRole}&actual=${user.role}`);
+          });
+          return;
+        }
+        
+        // Clear the expected role from session
+        delete (req.session as any).oauthExpectedRole;
+        
         // User is now authenticated via session
         // Redirect to home with success flag
         res.redirect("/?oauth_success=true");
@@ -323,6 +363,8 @@ export async function registerRoutes(
         if (err) {
           return res.status(500).json({ error: "Failed to logout" });
         }
+        // Clear the session cookie
+        res.clearCookie("connect.sid", { path: "/" });
         res.json({ message: "Logged out successfully" });
       });
     });
@@ -442,11 +484,11 @@ export async function registerRoutes(
   });
 
   // Create Stripe checkout session for wallet recharge
-  app.post("/api/wallet/checkout", requireClient, async (req, res, next) => {
+  app.post("/api/wallet/checkout", requireClient, paymentLimiter, async (req, res, next) => {
     try {
       const user = req.user as any;
-      const { amount, packName } = req.body;
-      const userId = user.dbUser?.id || user.claims?.sub;
+      const { amount, packName, idempotencyKey } = req.body;
+      const userId = user.dbUser?.id || user.claims?.sub || user.id;
       
       if (!amount || amount < 100) {
         return res.status(400).json({ error: "Minimum recharge amount is ₹100" });
@@ -459,6 +501,9 @@ export async function registerRoutes(
 
       const stripe = await getUncachableStripeClient();
       const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      
+      // Use idempotency key if provided, otherwise generate one
+      const idempotency = idempotencyKey || `wallet_${userId}_${Date.now()}`;
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -480,7 +525,10 @@ export async function registerRoutes(
           userId,
           amount: amount.toString(),
           type: 'wallet_recharge',
+          idempotencyKey: idempotency,
         },
+      }, {
+        idempotencyKey: idempotency, // Stripe idempotency key
       });
 
       res.json({ url: session.url });
@@ -531,7 +579,7 @@ export async function registerRoutes(
   });
 
   // Create Razorpay order for UPI payment
-  app.post("/api/wallet/razorpay-order", requireClient, async (req, res, next) => {
+  app.post("/api/wallet/razorpay-order", requireClient, paymentLimiter, async (req, res, next) => {
     try {
       const user = req.user as any;
       const { amount, packName } = req.body;
@@ -544,6 +592,24 @@ export async function registerRoutes(
       const existingWallet = await storage.getWallet(userId);
       if (!existingWallet) {
         await storage.createWallet({ userId, balance: "0", totalRecharged: "0" });
+      }
+
+      // Check for existing pending order to prevent duplicate charges
+      const existingOrders = await db
+        .select()
+        .from(paymentOrders)
+        .where(
+          and(
+            eq(paymentOrders.userId, userId),
+            eq(paymentOrders.status, "pending"),
+            gte(paymentOrders.createdAt, new Date(Date.now() - 5 * 60 * 1000)) // Last 5 minutes
+          )
+        );
+      
+      if (existingOrders.length > 0) {
+        return res.status(400).json({ 
+          error: "A payment is already in progress. Please wait or try again in a few minutes." 
+        });
       }
 
       const razorpay = getRazorpayClient();
@@ -574,7 +640,7 @@ export async function registerRoutes(
   });
 
   // Verify Razorpay payment and credit wallet
-  app.post("/api/wallet/razorpay-verify", requireClient, async (req, res, next) => {
+  app.post("/api/wallet/razorpay-verify", requireClient, paymentLimiter, async (req, res, next) => {
     try {
       const user = req.user as any;
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -675,6 +741,19 @@ export async function registerRoutes(
       const user = req.user as User;
       const sessions = await storage.getProfessionalUpcomingSessions(user.id);
       res.json({ sessions });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get session by ID
+  app.get("/api/sessions/:id", requireAuth, async (req, res, next) => {
+    try {
+      const session = await storage.getSession(req.params.id);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      res.json({ session });
     } catch (error) {
       next(error);
     }
@@ -807,7 +886,7 @@ export async function registerRoutes(
   // ==================== JOURNAL ROUTES ====================
   
   // Create journal entry with AI insights
-  app.post("/api/journal", requireClient, async (req, res, next) => {
+  app.post("/api/journal", requireClient, aiLimiter, async (req, res, next) => {
     try {
       const user = req.user as User;
       const { title, content, mood } = req.body;
@@ -849,7 +928,7 @@ export async function registerRoutes(
   // ==================== CHAT ROUTES ====================
   
   // Send chat message and get AI response
-  app.post("/api/chat", requireClient, async (req, res, next) => {
+  app.post("/api/chat", requireClient, aiLimiter, async (req, res, next) => {
     try {
       const user = req.user as User;
       const { message, conversationId } = req.body;
@@ -990,7 +1069,7 @@ export async function registerRoutes(
 
   // ==================== PUBLIC CHAT (NO AUTH REQUIRED) ====================
   
-  app.post("/api/public-chat", async (req, res, next) => {
+  app.post("/api/public-chat", aiLimiter, async (req, res, next) => {
     try {
       const { message, conversationHistory = [] } = req.body;
       

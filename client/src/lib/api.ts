@@ -15,8 +15,10 @@ async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "An error occurred" }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const error = await response.json().catch(() => ({ error: "An error occurred", message: "An error occurred" }));
+    // Prefer message field if available (more detailed), otherwise use error field
+    const errorMessage = error.message || error.error || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -34,10 +36,10 @@ export interface UserResponse {
   };
 }
 
-export async function login(email: string, password: string): Promise<UserResponse> {
+export async function login(email: string, password: string, expectedRole?: 'client' | 'professional'): Promise<UserResponse> {
   return apiRequest("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, expectedRole }),
   });
 }
 

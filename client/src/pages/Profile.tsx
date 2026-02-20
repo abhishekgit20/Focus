@@ -100,6 +100,7 @@ export default function Profile() {
   const { user, isLoading: isUserLoading, isAuthenticated } = useAuth();
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [journalEntry, setJournalEntry] = useState("");
+  const [selectedMood, setSelectedMood] = useState<string>("");
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isAutoRotating, setIsAutoRotating] = useState(true);
   const [sessionHistory, setSessionHistory] = useState<any[]>([]);
@@ -163,6 +164,7 @@ export default function Profile() {
       description: "You earned +20 XP for your reflection!",
     });
     setJournalEntry("");
+    setSelectedMood("");
     setIsJournalOpen(false);
   };
 
@@ -607,7 +609,16 @@ export default function Profile() {
                               <Label htmlFor="mood">Current Mood</Label>
                               <div className="flex gap-2">
                                 {['Stressed', 'Okay', 'Good', 'Great'].map((m) => (
-                                  <Badge key={m} variant="outline" className="cursor-pointer hover:bg-primary/10 px-3 py-1">
+                                  <Badge 
+                                    key={m} 
+                                    variant="outline" 
+                                    className={`cursor-pointer px-3 py-1 transition-all ${
+                                      selectedMood === m 
+                                        ? 'bg-primary text-primary-foreground border-primary' 
+                                        : 'hover:bg-primary/10'
+                                    }`}
+                                    onClick={() => setSelectedMood(m)}
+                                  >
                                     {m}
                                   </Badge>
                                 ))}

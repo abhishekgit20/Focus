@@ -103,6 +103,14 @@ export async function generateChatResponse(
     };
   }
 
+  // Enforce max message length
+  const maxLength = 5000;
+  if (userMessage.length > maxLength) {
+    return {
+      response: "Your message is too long. Please keep it under 5000 characters and try again."
+    };
+  }
+
   try {
     const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
       { role: 'system', content: bhagavadGitaContext },
@@ -111,13 +119,24 @@ export async function generateChatResponse(
     ];
 
     const model = process.env.OPENAI_MODEL || "gpt-4o";
-    
-    const completion = await openai.chat.completions.create({
-      model,
-      messages,
-      max_tokens: 2048, // Reduced from 8192 for faster responses and lower costs
-      temperature: 0.7, // Add temperature for more natural responses
-    });
+
+    // Add timeout and abort controller for safety
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model,
+        messages,
+        max_tokens: 2048, // Reduced from 8192 for faster responses and lower costs
+        temperature: 0.7, // Add temperature for more natural responses
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI request timeout')), 30000)
+      )
+    ]) as any;
+
+    clearTimeout(timeoutId);
 
     const response = completion.choices[0]?.message?.content;
     
@@ -207,6 +226,12 @@ export async function generateJournalInsights(
     return "Thank you for sharing your thoughts. Journaling is a powerful tool for self-reflection and growth.";
   }
 
+  // Enforce max content length
+  const maxLength = 10000;
+  if (journalContent.length > maxLength) {
+    journalContent = journalContent.substring(0, maxLength) + "...";
+  }
+
   try {
     const prompt = `As a mental health counselor, analyze this journal entry and provide supportive insights incorporating Bhagavad Gita wisdom when appropriate.
 
@@ -222,15 +247,20 @@ Provide:
 
 Keep the response warm, supportive, and concise (2-3 short paragraphs).`;
 
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o",
-      messages: [
-        { role: 'system', content: bhagavadGitaContext },
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 1024, // Reduced for journal insights
-      temperature: 0.7,
-    });
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || "gpt-4o",
+        messages: [
+          { role: 'system', content: bhagavadGitaContext },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 1024, // Reduced for journal insights
+        temperature: 0.7,
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI request timeout')), 20000)
+      )
+    ]) as any;
 
     return completion.choices[0]?.message?.content || "Thank you for sharing your thoughts. Journaling is a powerful tool for self-reflection and growth.";
   } catch (error: any) {
@@ -248,6 +278,12 @@ export async function analyzeMood(journalContent: string): Promise<string> {
     return 'calm'; // Default fallback
   }
 
+  // Enforce max content length
+  const maxLength = 5000;
+  if (journalContent.length > maxLength) {
+    journalContent = journalContent.substring(0, maxLength);
+  }
+
   try {
     const prompt = `Analyze the emotional tone of this journal entry and classify it into one of these moods: happy, sad, anxious, calm, stressed, hopeful, frustrated, peaceful.
 
@@ -256,12 +292,17 @@ ${journalContent}
 
 Respond with just the single word mood classification.`;
 
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o",
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 10,
-      temperature: 0.3, // Lower temperature for more consistent classification
-    });
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || "gpt-4o",
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 10,
+        temperature: 0.3, // Lower temperature for more consistent classification
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI request timeout')), 10000)
+      )
+    ]) as any;
 
     const mood = completion.choices[0]?.message?.content?.trim().toLowerCase() || "calm";
     

@@ -19,8 +19,17 @@ export function setupAuth(app: Express) {
     tableName: "auth_sessions",
   });
 
+  // Enforce SESSION_SECRET in production
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET environment variable is required in production");
+    }
+    console.warn("⚠️  WARNING: SESSION_SECRET not set. Using fallback (NOT SECURE FOR PRODUCTION)");
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "focus-mental-health-secret-key-change-in-production",
+    secret: sessionSecret || "focus-mental-health-secret-key-change-in-production",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
@@ -28,7 +37,7 @@ export function setupAuth(app: Express) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax", // Always use 'lax' for better compatibility
     },
   };
 
@@ -146,13 +155,13 @@ export function requireProfessional(req: any, res: any, next: any) {
   res.status(403).json({ error: "Forbidden - Professional access required" });
 }
 
-  // Middleware to check if user has client role
-  export function requireClient(req: any, res: any, next: any) {
-    if (req.isAuthenticated() && (req.user as User).role === 'client') {
-      return next();
-    }
-    res.status(403).json({ error: "Forbidden - Client access required" });
+// Middleware to check if user has client role
+export function requireClient(req: any, res: any, next: any) {
+  if (req.isAuthenticated() && (req.user as User).role === 'client') {
+    return next();
   }
+  res.status(403).json({ error: "Forbidden - Client access required" });
+}
 
   // Middleware to check if user has admin role
   export function requireAdmin(req: any, res: any, next: any) {

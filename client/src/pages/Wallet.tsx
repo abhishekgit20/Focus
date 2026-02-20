@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 declare global {
   interface Window {
@@ -27,7 +28,7 @@ interface RechargePack {
   tag: string | null;
 }
 
-export default function WalletPage() {
+function WalletPageContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location] = useLocation();
@@ -415,5 +416,13 @@ export default function WalletPage() {
         </Dialog>
       </div>
     </PageTransition>
+  );
+}
+
+export default function WalletPage() {
+  return (
+    <ProtectedRoute>
+      <WalletPageContent />
+    </ProtectedRoute>
   );
 }
