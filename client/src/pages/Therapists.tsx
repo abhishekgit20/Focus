@@ -1,87 +1,60 @@
 import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, MapPin, Calendar, Filter, IndianRupee } from "lucide-react";
+import { Star, MapPin, Calendar, Zap, Loader2, MessageSquare, Phone, Video } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FilterPanel } from "@/components/FilterPanel";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { getAllProfessionals } from "@/lib/api";
+import { BookingModal } from "@/components/BookingModal";
 
-// Mock Data - Indian Context
-const professionals = [
-  {
-    id: 1,
-    name: "Dr. Ananya Sharma",
-    title: "Clinical Psychologist",
-    specialty: "Anxiety & Stress",
-    rating: 4.9,
-    reviews: 124,
-    location: "Mumbai, Maharashtra",
-    availability: "Available Today",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200&h=200",
-    tags: ["Hindi", "English", "CBT"],
-    price: "₹25/min"
-  },
-  {
-    id: 2,
-    name: "Guru Rajesh Kumar",
-    title: "Yoga & Meditation Instructor",
-    specialty: "Mindfulness & Breathwork",
-    rating: 5.0,
-    reviews: 210,
-    location: "Rishikesh (Online Available)",
-    availability: "Next Class: 5 PM",
-    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200&h=200",
-    tags: ["Hatha Yoga", "Vedic Wisdom", "Stress Relief"],
-    price: "₹15/min"
-  },
-  {
-    id: 3,
-    name: "Dr. Arjun Mehta",
-    title: "Psychiatrist",
-    specialty: "Depression & Mood Disorders",
-    rating: 4.8,
-    reviews: 89,
-    location: "Bangalore, Karnataka",
-    availability: "Tomorrow",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200",
-    tags: ["Medication Management", "English", "Kannada"],
-    price: "₹40/min"
-  },
-  {
-    id: 4,
-    name: "Priya Patel",
-    title: "Therapist",
-    specialty: "Family & Relationship",
-    rating: 4.9,
-    reviews: 56,
-    location: "Ahmedabad, Gujarat",
-    availability: "Available Today",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200&h=200",
-    tags: ["Gujarati", "Hindi", "Counseling"],
-    price: "₹20/min"
-  }
-];
+const FALLBACK_AVATAR =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23e2e8f0'/><circle cx='100' cy='78' r='38' fill='%23a0aec0'/><ellipse cx='100' cy='190' rx='70' ry='55' fill='%23a0aec0'/></svg>";
 
 export default function Therapists() {
   const [filter, setFilter] = useState("All");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string[]>>({});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const [bookingTarget, setBookingTarget] = useState<{ id: string; name: string; isOnline: boolean; type: "chat" | "audio" | "video" } | null>(null);
 
-  const handleStartSession = (profId: number, type: "chat" | "call") => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    
-    if (!isLoggedIn) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["/api/professionals"],
+    queryFn: getAllProfessionals,
+  });
+
+  const professionals = (data?.professionals || []).map((p) => ({
+    id: p.user.id,
+    name: p.user.fullName || "Professional",
+    title: p.specialization,
+    specialty: p.specialization,
+    rating: Number(p.rating) || 0,
+    reviews: p.totalReviews || 0,
+    location: "Online",
+    isOnline: !!p.isOnline,
+    availability: p.isOnline ? "Available Now" : "Offline",
+    image: p.user.profileImage || FALLBACK_AVATAR,
+    tags: p.languages || [],
+    minPrice: p.minPrice,
+    experience: p.experience ?? 0,
+    gender: p.user.gender,
+  }));
+
+  const handleBook = (profId: string, name: string, isOnline: boolean, type: "chat" | "audio" | "video") => {
+    if (!isAuthenticated) {
       toast({
         title: "Login Required",
-        description: "Please sign in to start a session with our professionals.",
+        description: "Please sign in to book a session with our professionals.",
         variant: "destructive",
       });
       setLocation("/login");
-    } else {
-      setLocation(`/consultation/${profId}/${type}`);
+      return;
     }
+    setBookingTarget({ id: profId, name, isOnline, type });
   };
 
   const filteredProfessionals = professionals.filter(prof => {
@@ -120,8 +93,43 @@ export default function Therapists() {
         const hasSpecialty = advancedFilters.specialty.some(spec => prof.specialty.includes(spec));
         if (!hasSpecialty) return false;
       }
-      
-      // Add more filter logic here as needed for Price, Experience, etc.
+
+      // Price Range — these used to be shown as active filter chips with no
+      // effect on the results at all, giving a false sense of narrowing.
+      if (advancedFilters.price?.length > 0) {
+        const price = prof.minPrice != null ? Number(prof.minPrice) : null;
+        const matchesBucket = (bucket: string): boolean => {
+          if (price == null) return false;
+          if (bucket === "Below ₹300") return price < 300;
+          if (bucket === "₹300–500") return price >= 300 && price <= 500;
+          if (bucket === "₹500–800") return price > 500 && price <= 800;
+          if (bucket === "₹800–1200") return price > 800 && price <= 1200;
+          if (bucket === "₹1200+") return price > 1200;
+          return false;
+        };
+        if (!advancedFilters.price.some(matchesBucket)) return false;
+      }
+
+      // Experience
+      if (advancedFilters.experience?.length > 0) {
+        const matchesBucket = (bucket: string): boolean => {
+          const years = prof.experience;
+          if (bucket === "0–3 years") return years >= 0 && years <= 3;
+          if (bucket === "3–7 years") return years > 3 && years <= 7;
+          if (bucket === "7–15 years") return years > 7 && years <= 15;
+          if (bucket === "15+ years") return years > 15;
+          return false;
+        };
+        if (!advancedFilters.experience.some(matchesBucket)) return false;
+      }
+
+      // Gender Preference
+      if (advancedFilters.gender?.length > 0) {
+        const hasGender = advancedFilters.gender.some(
+          (g) => prof.gender?.toLowerCase() === g.toLowerCase()
+        );
+        if (!hasGender) return false;
+      }
     }
 
     return true;
@@ -167,6 +175,20 @@ export default function Therapists() {
           </div>
         </div>
 
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin mb-3" />
+            <p>Loading professionals...</p>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-24 text-muted-foreground">
+            <p>Couldn't load professionals right now. Please try again shortly.</p>
+          </div>
+        ) : filteredProfessionals.length === 0 ? (
+          <div className="text-center py-24 text-muted-foreground">
+            <p>No professionals match these filters yet.</p>
+          </div>
+        ) : (
         <div className="grid lg:grid-cols-2 gap-6">
           {filteredProfessionals.map((prof) => (
             <div key={prof.id} className="bg-card border rounded-2xl p-6 flex flex-col sm:flex-row gap-6 hover:shadow-lg transition-all duration-300 group">
@@ -186,16 +208,32 @@ export default function Therapists() {
                     <h3 className="text-xl font-bold font-serif">{prof.name}</h3>
                     <p className="text-primary font-medium text-sm">{prof.title}</p>
                   </div>
-                  <div className="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded-md border border-green-100">
-                    {prof.price}
+                  <div className="text-right shrink-0">
+                    <div className="text-xs text-muted-foreground">Session Starts From</div>
+                    <div className="text-lg font-bold text-primary">₹{prof.minPrice ?? "—"}</div>
                   </div>
                 </div>
-                
+
                 <p className="text-sm text-muted-foreground mb-3">{prof.specialty}</p>
 
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {prof.location}</span>
-                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {prof.availability}</span>
+                <div className="flex items-center gap-3 text-xs mb-4 flex-wrap">
+                  {prof.isOnline ? (
+                    <span className="flex items-center gap-1 text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Online
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                      Offline
+                    </span>
+                  )}
+                  {prof.isOnline && (
+                    <span className="flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full font-medium">
+                      <Zap className="w-3 h-3" /> Instant Session Available
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Calendar className="w-3 h-3" /> Scheduled Session
+                  </span>
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-6">
@@ -206,28 +244,48 @@ export default function Therapists() {
                   ))}
                 </div>
 
-                <div className="flex gap-3 mt-auto">
-                  <Button 
-                    className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
-                    onClick={() => handleStartSession(prof.id, "chat")}
+                <div className="flex gap-2 mt-auto">
+                  <Button
+                    className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm gap-1.5"
+                    onClick={() => handleBook(prof.id, prof.name, prof.isOnline, "chat")}
                     data-testid={`button-chat-${prof.id}`}
                   >
-                    Chat Now
+                    <MessageSquare className="w-4 h-4" /> Chat
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="rounded-full text-sm"
-                    onClick={() => handleStartSession(prof.id, "call")}
+                  <Button
+                    variant="outline"
+                    className="rounded-full text-sm gap-1.5"
+                    onClick={() => handleBook(prof.id, prof.name, prof.isOnline, "audio")}
                     data-testid={`button-call-${prof.id}`}
                   >
-                    Call Now
+                    <Phone className="w-4 h-4" /> Voice
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded-full text-sm gap-1.5"
+                    onClick={() => handleBook(prof.id, prof.name, prof.isOnline, "video")}
+                    data-testid={`button-video-${prof.id}`}
+                  >
+                    <Video className="w-4 h-4" /> Video
                   </Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        )}
       </div>
+
+      {bookingTarget && (
+        <BookingModal
+          professionalId={bookingTarget.id}
+          professionalName={bookingTarget.name}
+          isOnline={bookingTarget.isOnline}
+          consultationType={bookingTarget.type}
+          open={!!bookingTarget}
+          onOpenChange={(open) => !open && setBookingTarget(null)}
+        />
+      )}
     </PageTransition>
   );
 }

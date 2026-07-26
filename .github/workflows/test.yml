@@ -1,0 +1,74 @@
+name: Test
+
+on:
+  push:
+    branches: [2026-01-04-d305, main]
+  pull_request:
+    branches: [2026-01-04-d305, main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit + integration tests (real DB)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: focus_test
+          POSTGRES_PASSWORD: focus_test
+          POSTGRES_DB: focus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U focus_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://focus_test:focus_test@localhost:5432/focus_test
+      # Test-only, not a secret — this DB is destroyed at the end of the job.
+      # Fixed rather than random so a failed run's logs/error messages are
+      # reproducible if a run needs debugging.
+      FIELD_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # There's no migration runner in active use for this project (see
+      # migrations/*.sql — hand-written, applied manually against the real
+      # dev DB). drizzle-kit push syncs shared/schema.ts straight onto the
+      # fresh, empty CI database instead, which is equivalent for testing
+      # purposes and doesn't require replaying migration history. --force
+      # auto-approves data-loss confirmations, which only matters for a
+      # database with existing data to lose — irrelevant here since this
+      # Postgres container starts empty every run.
+      - name: Push schema to disposable CI database
+        run: npm run db:push -- --force
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      # The opt-in integration suites (server/**/*.integration.test.ts) are
+      # skipped by default locally (RUN_INTEGRATION_TESTS unset) because
+      # there's no separate test database configured for local dev — see
+      # the comment at the top of each *.integration.test.ts file. CI is
+      # where "opt-in" actually gets exercised: this is a disposable
+      # database that only exists for this job, so there's no live-data risk
+      # in flipping it on here.
+      - name: Integration tests (real DB — webhook replay, reconciliation, wallet concurrency, partial refunds)
+        run: RUN_INTEGRATION_TESTS=1 npm test
+
+      - name: Production build
+        run: npm run build

@@ -2,6 +2,10 @@ node_modules
 dist
 .DS_Store
 server/public
+
+# Uploaded professional-application documents — never served statically,
+# never committed (contains government IDs, licenses, etc.)
+uploads/
 vite.config.ts.*
 *.tar.gz
 
@@ -10,9 +14,6 @@ vite.config.ts.*
 .env.local
 .env.*.local
 
-# Replit files (if any remain)
-.replit
-replit.nix
 .local/
 
 # IDE

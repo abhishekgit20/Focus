@@ -80,6 +80,7 @@ export function MicroPractices() {
       return res.json();
     },
     onSuccess: () => {
+      // Prefix match: also invalidates Profile.tsx's ["/api/micro-practices", 30] query.
       queryClient.invalidateQueries({ queryKey: ["/api/micro-practices"] });
       setIsCompleting(false);
       setActivePractice(null);

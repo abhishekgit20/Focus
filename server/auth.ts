@@ -6,7 +6,13 @@ import type { Express } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import type { User } from "@shared/schema";
-import bcrypt from "bcryptjs";
+import { SESSION_SECRET } from "./sessionSecret";
+import { hashPassword, verifyPassword, needsRehash } from "./security/passwordHashing";
+import type { InsertUser } from "@shared/schema";
+
+// Fixed reference hash used to run a dummy verify when the email doesn't
+// exist, so login response timing doesn't leak whether an account exists.
+const DUMMY_HASH = "$argon2id$v=19$m=65536,t=3,p=4$HKKJhIZ34pqjtwp37DdUcQ$yY5y7hJjxnAjkh1RqSzGxsW9WqQlix1SVAAy36ZtemE";
 
 const pgStore = connectPg(session);
 
@@ -19,17 +25,8 @@ export function setupAuth(app: Express) {
     tableName: "auth_sessions",
   });
 
-  // Enforce SESSION_SECRET in production
-  const sessionSecret = process.env.SESSION_SECRET;
-  if (!sessionSecret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("SESSION_SECRET environment variable is required in production");
-    }
-    console.warn("⚠️  WARNING: SESSION_SECRET not set. Using fallback (NOT SECURE FOR PRODUCTION)");
-  }
-
   const sessionSettings: session.SessionOptions = {
-    secret: sessionSecret || "focus-mental-health-secret-key-change-in-production",
+    secret: SESSION_SECRET,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
@@ -55,16 +52,62 @@ export function setupAuth(app: Express) {
       async (email, password, done) => {
         try {
           const user = await storage.getUserByEmail(email);
-          
+
           if (!user || !user.password) {
+            // Run a dummy verify so a nonexistent email takes roughly the
+            // same time as a wrong password against a real one.
+            await verifyPassword(password, DUMMY_HASH).catch(() => {});
             return done(null, false, { message: "Invalid email or password" });
           }
 
-          const isValidPassword = await bcrypt.compare(password, user.password);
-          
-          if (!isValidPassword) {
-            return done(null, false, { message: "Invalid email or password" });
+          if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+            // SECURITY: a distinct message/timing here (vs. plain "wrong
+            // password") lets an attacker probe arbitrary emails and learn
+            // which ones exist purely from getting a lockout response,
+            // without ever guessing the password. Run the same real verify
+            // as the non-locked path so response timing doesn't leak it
+            // either — the result is discarded, login is denied either way.
+            // `locked` is passed through to the caller for audit logging
+            // only; routes.ts must not surface it in the HTTP response.
+            await verifyPassword(password, user.password).catch(() => {});
+            return done(null, false, { message: "Invalid email or password", locked: true } as any);
           }
+
+          const isValidPassword = await verifyPassword(password, user.password);
+
+          if (!isValidPassword) {
+            const attempts = user.failedLoginAttempts + 1;
+            const updates: Partial<InsertUser> = { failedLoginAttempts: attempts };
+            let lockMessage: string | undefined;
+
+            // Progressive lockout: each repeat offense locks longer.
+            if (attempts >= 12) {
+              updates.lockedUntil = new Date(Date.now() + 2 * 60 * 60 * 1000);
+              lockMessage = "Too many failed attempts. Account locked for 2 hours.";
+            } else if (attempts >= 8) {
+              updates.lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+              lockMessage = "Too many failed attempts. Account locked for 30 minutes.";
+            } else if (attempts >= 5) {
+              updates.lockedUntil = new Date(Date.now() + 5 * 60 * 1000);
+              lockMessage = "Too many failed attempts. Account locked for 5 minutes.";
+            }
+
+            await storage.updateUser(user.id, updates);
+            // SECURITY: don't surface lockMessage externally — it would tell
+            // an attacker their guesses just crossed the lockout threshold,
+            // confirming the account is real. `locked` still flows to the
+            // caller for audit logging only (see the pre-existing-lock branch
+            // above for the fuller rationale).
+            return done(null, false, { message: "Invalid email or password", locked: !!lockMessage, userId: user.id } as any);
+          }
+
+          // Success: clear the failure counter, and lazily upgrade legacy
+          // bcrypt hashes to Argon2id — no forced reset, no user-visible change.
+          const resetUpdates: Partial<InsertUser> = { failedLoginAttempts: 0, lockedUntil: null };
+          if (needsRehash(user.password)) {
+            resetUpdates.password = await hashPassword(password);
+          }
+          await storage.updateUser(user.id, resetUpdates);
 
           return done(null, user);
         } catch (error) {
@@ -87,19 +130,21 @@ export function setupAuth(app: Express) {
           try {
             const email = profile.emails?.[0]?.value;
             if (!email) {
-              return done(new Error("No email found in Google profile"), null);
+              return done(new Error("No email found in Google profile"));
             }
 
             // Check if user exists
             let user = await storage.getUserByEmail(email);
 
             if (!user) {
-              // Create new user
+              // Create new user. OAuth accounts skip email verification —
+              // Google has already verified this address.
               user = await storage.createUser({
                 email,
                 fullName: profile.displayName || profile.name?.givenName || "User",
                 role: 'client', // Default to client, can be changed later
                 profileImage: profile.photos?.[0]?.value,
+                emailVerified: true,
               });
 
               // Create wallet for client
@@ -109,13 +154,12 @@ export function setupAuth(app: Express) {
                 totalRecharged: "0",
               });
             } else if (!user.profileImage && profile.photos?.[0]?.value) {
-              // Update profile image if missing
-              // Note: You may need to add an updateUser method to storage
+              user = await storage.updateUser(user.id, { profileImage: profile.photos[0].value });
             }
 
             return done(null, user);
           } catch (error) {
-            return done(error, null);
+            return done(error as Error);
           }
         }
       )
@@ -136,37 +180,15 @@ export function setupAuth(app: Express) {
   });
 }
 
-// Middleware to check if user is authenticated
-export function requireAuth(req: any, res: any, next: any) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: "Unauthorized - Please log in" });
-}
-
-// Alias for compatibility with existing code
-export const isAuthenticated = requireAuth;
-
-// Middleware to check if user has professional role
-export function requireProfessional(req: any, res: any, next: any) {
-  if (req.isAuthenticated() && (req.user as User).role === 'professional') {
-    return next();
-  }
-  res.status(403).json({ error: "Forbidden - Professional access required" });
-}
-
-// Middleware to check if user has client role
-export function requireClient(req: any, res: any, next: any) {
-  if (req.isAuthenticated() && (req.user as User).role === 'client') {
-    return next();
-  }
-  res.status(403).json({ error: "Forbidden - Client access required" });
-}
-
-  // Middleware to check if user has admin role
-  export function requireAdmin(req: any, res: any, next: any) {
-    if (req.isAuthenticated() && (req.user as User).role === 'admin') {
-      return next();
-    }
-    res.status(403).json({ error: "Forbidden - Admin access required" });
-  }
+// Authentication/role middleware lives in ./security/roleMiddleware — it's
+// pure decision logic with no DB dependency, which also makes it unit
+// testable in isolation. Re-exported here so existing call sites
+// (`import { requireAuth, ... } from "./auth"`) don't need to change.
+export {
+  requireAuth,
+  isAuthenticated,
+  requireProfessional,
+  requireClient,
+  requireAdmin,
+  requireSuperAdmin,
+} from "./security/roleMiddleware";

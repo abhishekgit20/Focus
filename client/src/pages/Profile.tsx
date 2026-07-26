@@ -5,12 +5,15 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, History, Video, Phone, MessageSquare, Loader2, Heart, Flower } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Activity, BookOpen, Smile, Frown, Meh, Info, HelpCircle, PenLine, Lightbulb, ChevronLeft, ChevronRight, History, Video, Phone, MessageSquare, Loader2, Heart } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { AccountSecuritySettings } from "@/components/AccountSecuritySettings";
 import {
   Tooltip,
   TooltipContent,
@@ -30,26 +33,86 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { MicroPractices } from "@/components/MicroPractices";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { DailyCheckIn } from "@/components/DailyCheckIn";
+import { getInvoicePdfUrl, cancelBooking, resendVerificationEmail } from "@/lib/api";
 
-const MOOD_DATA = [
-  { day: "Mon", score: 6 },
-  { day: "Tue", score: 7 },
-  { day: "Wed", score: 5 },
-  { day: "Thu", score: 8 },
-  { day: "Fri", score: 7 },
-  { day: "Sat", score: 9 },
-  { day: "Sun", score: 8 },
-];
+interface CheckIn {
+  id: string;
+  feeling: string | null;
+  moodScore: number | null;
+  checkInDate: string;
+}
 
-const ACTIVITY_DATA = [
-  { day: "Mon", mins: 15 },
-  { day: "Tue", mins: 30 },
-  { day: "Wed", mins: 20 },
-  { day: "Thu", mins: 45 },
-  { day: "Fri", mins: 30 },
-  { day: "Sat", mins: 60 },
-  { day: "Sun", mins: 45 },
-];
+interface MicroPractice {
+  id: string;
+  practiceType: string;
+  completedAt: string;
+  durationSeconds: number | null;
+}
+
+interface JournalEntry {
+  id: string;
+  content: string;
+  mood: string | null;
+  createdAt: string;
+}
+
+const MOOD_LABEL_TO_SCORE: Record<string, number> = {
+  Stressed: 3,
+  Okay: 6,
+  Good: 7,
+  Great: 9,
+};
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function dateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+// Longest run of consecutive days (ending today or yesterday) with any recorded activity.
+function computeStreakDays(activityDates: string[]): number {
+  const daySet = new Set(activityDates.map((d) => dateKey(new Date(d))));
+  let streak = 0;
+  const cursor = new Date();
+  // Allow the streak to still count if today has no activity yet but yesterday does.
+  if (!daySet.has(dateKey(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (daySet.has(dateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function buildWeeklyMoodData(checkIns: CheckIn[]) {
+  return checkIns
+    .filter((c) => c.moodScore != null)
+    .slice(-7)
+    .map((c) => ({
+      day: DAY_LABELS[new Date(c.checkInDate).getDay()],
+      score: c.moodScore as number,
+    }));
+}
+
+function buildWeeklyActivityData(practices: MicroPractice[]) {
+  const minutesByDay = new Map<string, number>();
+  for (const p of practices) {
+    const key = dateKey(new Date(p.completedAt));
+    const mins = (p.durationSeconds || 0) / 60;
+    minutesByDay.set(key, (minutesByDay.get(key) || 0) + mins);
+  }
+  return Array.from(minutesByDay.entries())
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .slice(-7)
+    .map(([key, mins]) => ({
+      day: DAY_LABELS[new Date(key).getDay()],
+      mins: Math.round(mins),
+    }));
+}
 
 const WELLNESS_FACTS = [
   {
@@ -98,13 +161,13 @@ export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isLoading: isUserLoading, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [journalEntry, setJournalEntry] = useState("");
   const [selectedMood, setSelectedMood] = useState<string>("");
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isAutoRotating, setIsAutoRotating] = useState(true);
-  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [sessionToCancel, setSessionToCancel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && !isAuthenticated) {
@@ -123,23 +186,188 @@ export default function Profile() {
     return () => clearInterval(interval);
   }, [isAutoRotating]);
 
-  useEffect(() => {
-    const fetchSessionHistory = async () => {
-      setIsLoadingSessions(true);
-      try {
-        const response = await fetch('/api/sessions', { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          setSessionHistory(data.sessions || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch session history:', error);
-      } finally {
-        setIsLoadingSessions(false);
+  const { data: sessionsData, isLoading: isLoadingSessions } = useQuery<{ sessions: any[] }>({
+    queryKey: ["/api/sessions"],
+    enabled: isAuthenticated,
+  });
+  const sessionHistory = sessionsData?.sessions || [];
+
+  const { data: recentCheckInsData, isLoading: isLoadingCheckIns } = useQuery<{ checkIns: CheckIn[] }>({
+    queryKey: ["/api/check-in/recent", 7],
+    queryFn: async () => {
+      const res = await fetch('/api/check-in/recent?days=7', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch check-ins');
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+  const checkIns = recentCheckInsData?.checkIns || [];
+
+  const { data: todayCheckInData } = useQuery<{ checkIn: CheckIn | null }>({
+    queryKey: ["/api/check-in/today"],
+    enabled: isAuthenticated,
+  });
+  const todayCheckIn = todayCheckInData?.checkIn ?? null;
+
+  const { data: practicesData, isLoading: isLoadingPractices } = useQuery<{ practices: MicroPractice[] }>({
+    queryKey: ["/api/micro-practices", 30],
+    queryFn: async () => {
+      const res = await fetch('/api/micro-practices?days=30', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch micro-practices');
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+  const microPractices = practicesData?.practices || [];
+
+  const { data: journalData, isLoading: isLoadingJournal } = useQuery<{ entries: JournalEntry[] }>({
+    queryKey: ["/api/journal"],
+    enabled: isAuthenticated,
+  });
+  const journalEntries = journalData?.entries || [];
+
+  const isLoadingActivityData = isLoadingCheckIns || isLoadingPractices || isLoadingJournal;
+
+  const checkInMutation = useMutation({
+    mutationFn: async (feeling: string) => {
+      const res = await apiRequest("POST", "/api/check-in", { feeling, moodScore: MOOD_LABEL_TO_SCORE[feeling] || 5 });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/check-in/recent", 7] });
+      queryClient.invalidateQueries({ queryKey: ["/api/check-in/today"] });
+      toast({ title: "Check-in saved", description: "Thanks for showing up for yourself today." });
+    },
+    onError: () => {
+      toast({ title: "Couldn't save check-in", description: "Please try again in a moment.", variant: "destructive" });
+    },
+  });
+  const isCheckingIn = checkInMutation.isPending;
+
+  const journalMutation = useMutation({
+    mutationFn: async ({ content, mood }: { content: string; mood?: string }) => {
+      const res = await apiRequest("POST", "/api/journal", { content, mood });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/journal"] });
+      setJournalEntry("");
+      setSelectedMood("");
+      setIsJournalOpen(false);
+
+      if (data.isCrisis) {
+        toast({
+          title: "We're concerned about you",
+          description: data.crisisSupportMessage,
+          duration: 15000,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Journal entry saved", description: "Thank you for taking a moment to reflect." });
       }
-    };
-    fetchSessionHistory();
-  }, []);
+    },
+    onError: () => {
+      toast({ title: "Couldn't save your entry", description: "Please try again in a moment.", variant: "destructive" });
+    },
+  });
+  const isSavingJournal = journalMutation.isPending;
+
+  const cancelBookingMutation = useMutation({
+    mutationFn: (sessionId: string) => cancelBooking(sessionId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+      setSessionToCancel(null);
+      toast({
+        title: "Booking cancelled",
+        description: data.message,
+        variant: data.refundStatus === "failed" ? "destructive" : "default",
+      });
+    },
+    onError: (error: Error) => {
+      // Surfaces the server's actual reason verbatim (e.g. the
+      // cancellation-window message), rather than a generic failure —
+      // this is the same detail the server already computes correctly.
+      toast({ title: "Couldn't cancel booking", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // The API and server route for this already existed with nothing in the
+  // UI ever calling it — a user who missed or lost the original 24h-expiry
+  // verification email had no self-service way to get another one.
+  const [verificationEmailSent, setVerificationEmailSent] = useState(false);
+  const resendVerificationMutation = useMutation({
+    mutationFn: resendVerificationEmail,
+    onSuccess: () => {
+      setVerificationEmailSent(true);
+      toast({ title: "Verification email sent", description: "Check your inbox (and spam folder)." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Couldn't send email", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
+  const handleDownloadInvoice = async (sessionId: string) => {
+    // Previously a plain <a target="_blank"> — if PDF generation threw
+    // server-side, the user just got a blank/error tab with no in-app
+    // signal anything went wrong. Fetching first lets a real failure show
+    // an actual message instead.
+    setDownloadingInvoiceId(sessionId);
+    try {
+      const res = await fetch(getInvoicePdfUrl(sessionId), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to generate invoice");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast({ title: "Couldn't download invoice", description: "Please try again in a moment.", variant: "destructive" });
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
+
+  const completedSessions = sessionHistory.filter((s) => s.status === 'completed');
+  const upcomingSessions = sessionHistory
+    .filter((s) => s.status === 'scheduled' && s.scheduledAt && new Date(s.scheduledAt) >= new Date())
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+
+  const sessionMinutes = completedSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+  const practiceMinutes = microPractices.reduce((sum, p) => sum + (p.durationSeconds || 0) / 60, 0);
+  const totalMinutesInvested = sessionMinutes + practiceMinutes;
+  const totalHoursInvested = totalMinutesInvested / 60;
+  const momentsOfGrowth = microPractices.length + journalEntries.length;
+
+  const activityDates = [
+    ...checkIns.map((c) => c.checkInDate),
+    ...microPractices.map((p) => p.completedAt),
+    ...journalEntries.map((j) => j.createdAt),
+  ];
+  const streakDays = computeStreakDays(activityDates);
+  const activeDaysLast7 = new Set(
+    activityDates
+      .filter((d) => Date.now() - new Date(d).getTime() <= 7 * 24 * 60 * 60 * 1000)
+      .map((d) => dateKey(new Date(d)))
+  ).size;
+  const selfCarePercent = Math.round((activeDaysLast7 / 7) * 100);
+
+  const moodChartData = buildWeeklyMoodData(checkIns);
+  const activityChartData = buildWeeklyActivityData(microPractices);
+
+  // No activity anywhere yet - either a brand-new signup or a dormant account.
+  // Either way, show a getting-started welcome instead of a wall of zeros.
+  const isNewUser =
+    !isLoadingSessions &&
+    !isLoadingActivityData &&
+    completedSessions.length === 0 &&
+    checkIns.length === 0 &&
+    microPractices.length === 0 &&
+    journalEntries.length === 0;
+
+  const handleCheckIn = (feeling: string) => {
+    if (isCheckingIn) return;
+    checkInMutation.mutate(feeling);
+  };
 
   const goToPrevFact = () => {
     setIsAutoRotating(false);
@@ -157,22 +385,35 @@ export default function Profile() {
   };
 
   const handleSaveJournal = () => {
-    if (!journalEntry.trim()) return;
-    
-    toast({
-      title: "Journal Entry Saved",
-      description: "You earned +20 XP for your reflection!",
-    });
-    setJournalEntry("");
-    setSelectedMood("");
-    setIsJournalOpen(false);
+    if (!journalEntry.trim() || isSavingJournal) return;
+    journalMutation.mutate({ content: journalEntry.trim(), mood: selectedMood || undefined });
   };
 
   return (
     <PageTransition>
       <div className="container mx-auto px-4 py-12">
+        {user && !user.emailVerified && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-amber-900">Please verify your email address to secure your account.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-300 text-amber-900 hover:bg-amber-100"
+              disabled={resendVerificationMutation.isPending || verificationEmailSent}
+              onClick={() => resendVerificationMutation.mutate()}
+            >
+              {resendVerificationMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : verificationEmailSent ? (
+                "Email sent"
+              ) : (
+                "Resend verification email"
+              )}
+            </Button>
+          </div>
+        )}
         <div className="flex flex-col md:flex-row gap-8 items-start">
-          
+
           {/* Sidebar / User Info */}
           <div className="w-full md:w-1/3 lg:w-1/4 space-y-6">
             <Card className="overflow-hidden border-none shadow-lg">
@@ -201,22 +442,6 @@ export default function Profile() {
                       </p>
                     </>
                   )}
-                  <div className="flex gap-2 mt-4 justify-center items-center">
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200">Premium</Badge>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Badge variant="outline" className="cursor-help flex items-center gap-1">
-                            Level 5 <Info className="w-3 h-3" />
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Earned by consistent practice and journaling.</p>
-                          <p className="text-xs text-muted-foreground mt-1">Next level: 250 points</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
                 </div>
               </div>
             </Card>
@@ -228,10 +453,10 @@ export default function Profile() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">This month's self-care</span>
-                    <span className="font-bold">75%</span>
+                    <span className="text-muted-foreground">Active days this week</span>
+                    <span className="font-bold">{selfCarePercent}%</span>
                   </div>
-                  <Progress value={75} className="h-2" />
+                  <Progress value={selfCarePercent} className="h-2" />
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -244,12 +469,12 @@ export default function Profile() {
                   </TooltipProvider>
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="bg-muted/30 p-3 rounded-xl text-center">
-                    <div className="text-2xl font-bold text-primary">12</div>
+                  <div className="bg-muted/30 p-3 rounded-xl text-center transition-colors hover:bg-muted/50">
+                    <div className="text-2xl font-bold text-primary"><AnimatedNumber value={completedSessions.length} /></div>
                     <div className="text-xs text-muted-foreground">Sessions</div>
                   </div>
-                  <div className="bg-muted/30 p-3 rounded-xl text-center">
-                    <div className="text-2xl font-bold text-green-600">240</div>
+                  <div className="bg-muted/30 p-3 rounded-xl text-center transition-colors hover:bg-muted/50">
+                    <div className="text-2xl font-bold text-green-600"><AnimatedNumber value={Math.round(totalMinutesInvested)} /></div>
                     <div className="text-xs text-muted-foreground">Minutes</div>
                   </div>
                 </div>
@@ -260,6 +485,29 @@ export default function Profile() {
 
           {/* Main Content */}
           <div className="flex-1 w-full space-y-8">
+            {isNewUser && (
+              <Card className="border-none shadow-lg bg-gradient-to-br from-primary/10 via-primary/5 to-orange-50 overflow-hidden">
+                <CardContent className="p-6 md:p-8">
+                  <h2 className="text-2xl font-bold font-serif text-foreground mb-2">
+                    Welcome to Focus{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''} 👋
+                  </h2>
+                  <p className="text-muted-foreground mb-6 max-w-xl">
+                    This is your private space for mental wellbeing — an AI companion whenever you need to talk,
+                    daily check-ins, journaling, and professional support when you're ready for it.
+                    There's no right way to start. Here's the easiest first step:
+                  </p>
+                  <Link href="/chatbot">
+                    <Button size="lg" className="rounded-full gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Start a conversation with your AI companion
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
+            <DailyCheckIn />
+
             <div>
               <div className="flex justify-between items-start">
                 <div>
@@ -299,14 +547,16 @@ export default function Profile() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm overflow-hidden h-full">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm overflow-hidden h-full transition-all hover:shadow-md hover:-translate-y-0.5">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2 h-full">
                   <div className="p-3 bg-white rounded-full text-blue-500 shadow-sm shrink-0 mb-1">
                     <TrendingUp className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 w-full">
                     <p className="text-xs uppercase tracking-wider text-blue-600 font-semibold mb-1">Self-care streak</p>
-                    <h3 className="text-2xl font-bold text-blue-900 break-words">5 Days</h3>
+                    <h3 className="text-2xl font-bold text-blue-900 break-words">
+                      {streakDays === 0 ? "Just starting" : <><AnimatedNumber value={streakDays} /> {streakDays === 1 ? 'Day' : 'Days'}</>}
+                    </h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -321,14 +571,16 @@ export default function Profile() {
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm overflow-hidden h-full">
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm overflow-hidden h-full transition-all hover:shadow-md hover:-translate-y-0.5">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2 h-full">
                   <div className="p-3 bg-white rounded-full text-purple-500 shadow-sm shrink-0 mb-1">
                     <Award className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 w-full">
                     <p className="text-xs uppercase tracking-wider text-purple-600 font-semibold mb-1">Moments of growth</p>
-                    <h3 className="text-2xl font-bold text-purple-900 break-words">8 Moments</h3>
+                    <h3 className="text-2xl font-bold text-purple-900 break-words">
+                      {momentsOfGrowth === 0 ? "Waiting for you" : <><AnimatedNumber value={momentsOfGrowth} /> {momentsOfGrowth === 1 ? 'Moment' : 'Moments'}</>}
+                    </h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -343,14 +595,20 @@ export default function Profile() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm overflow-hidden h-full">
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm overflow-hidden h-full transition-all hover:shadow-md hover:-translate-y-0.5">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2 h-full">
                   <div className="p-3 bg-white rounded-full text-green-500 shadow-sm shrink-0 mb-1">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 w-full">
                     <p className="text-xs uppercase tracking-wider text-green-600 font-semibold mb-1">Time invested in you</p>
-                    <h3 className="text-2xl font-bold text-green-900 break-words">12.5 Hours</h3>
+                    <h3 className="text-2xl font-bold text-green-900 break-words">
+                      {totalHoursInvested === 0 ? (
+                        "Not yet — that's okay"
+                      ) : (
+                        <><AnimatedNumber value={totalHoursInvested} format={(n) => n.toFixed(1)} /> Hours</>
+                      )}
+                    </h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -376,35 +634,22 @@ export default function Profile() {
                 <CardDescription className="text-orange-700">Choose what feels right for you — all optional</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid md:grid-cols-2 gap-3">
                   <Link href="/chatbot">
                     <Button variant="outline" className="w-full justify-start gap-3 h-auto py-4 bg-white/80 hover:bg-white border-gray-200 hover:border-orange-300 transition-all">
                       <MessageSquare className="w-5 h-5 text-gray-700" />
                       <div className="text-left">
-                        <div className="font-semibold text-sm text-gray-900">Continue your chat</div>
-                        <div className="text-xs text-gray-600">Pick up where you left off</div>
+                        <div className="font-semibold text-sm text-gray-900">
+                          {isNewUser ? "Start a chat" : "Continue your chat"}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {isNewUser ? "Say hello to your AI companion" : "Pick up where you left off"}
+                        </div>
                       </div>
                     </Button>
                   </Link>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start gap-3 h-auto py-4 bg-white/80 hover:bg-white border-gray-200 hover:border-orange-300 transition-all"
-                    onClick={() => {
-                      toast({
-                        title: "Take a moment",
-                        description: "Breathe in for 4 counts, hold for 4, breathe out for 4. Repeat 3 times.",
-                        duration: 5000,
-                      });
-                    }}
-                  >
-                    <Flower className="w-5 h-5 text-gray-700" />
-                    <div className="text-left">
-                      <div className="font-semibold text-sm text-gray-900">Quick breathing</div>
-                      <div className="text-xs text-gray-600">A few moments of calm</div>
-                    </div>
-                  </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full justify-start gap-3 h-auto py-4 bg-white/80 hover:bg-white border-gray-200 hover:border-orange-300 transition-all"
                     onClick={() => setIsJournalOpen(true)}
                   >
@@ -420,6 +665,8 @@ export default function Profile() {
                 </p>
               </CardContent>
             </Card>
+
+            <MicroPractices />
 
             <Card className="relative overflow-hidden border-none shadow-lg bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50" data-testid="did-you-know-section">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -492,12 +739,13 @@ export default function Profile() {
             </Card>
 
             <Tabs defaultValue="mood" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 lg:w-[500px] mb-6">
+              <TabsList className="grid w-full grid-cols-4 lg:w-[640px] mb-6">
                 <TabsTrigger value="mood">Mood Tracker</TabsTrigger>
                 <TabsTrigger value="activity">Activity Log</TabsTrigger>
                 <TabsTrigger value="sessions" className="gap-1">
                   <History className="w-3 h-3" /> Sessions
                 </TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
               </TabsList>
               
               <TabsContent value="mood" className="space-y-6">
@@ -524,30 +772,38 @@ export default function Profile() {
                     <CardDescription>How you've been feeling this week</CardDescription>
                   </CardHeader>
                   <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={MOOD_DATA}>
-                        <defs>
-                          <linearGradient id="colorMood" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#FF9933" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#FF9933" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                        <YAxis hide domain={[0, 10]} />
-                        <RechartsTooltip 
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="score" 
-                          stroke="#FF9933" 
-                          strokeWidth={3}
-                          fillOpacity={1} 
-                          fill="url(#colorMood)" 
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {moodChartData.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+                        <Smile className="w-10 h-10 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No mood check-ins yet</p>
+                        <p className="text-sm text-muted-foreground">Check in below to start tracking how you feel.</p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={moodChartData}>
+                          <defs>
+                            <linearGradient id="colorMood" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#FF9933" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#FF9933" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="day" axisLine={false} tickLine={false} />
+                          <YAxis hide domain={[0, 10]} />
+                          <RechartsTooltip
+                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="score"
+                            stroke="#FF9933"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorMood)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -557,40 +813,60 @@ export default function Profile() {
                       <CardTitle className="text-base">Today's Check-in</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer">
-                          <div className="p-1.5 rounded-full bg-red-100 text-red-500 group-hover:scale-110 transition-transform shadow-sm">
-                            <Frown className="w-4 h-4" />
-                          </div>
-                          <span className="text-[10px] font-bold text-muted-foreground group-hover:text-red-600 uppercase">Stressed</span>
-                        </button>
+                      {todayCheckIn ? (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          You checked in as <strong>{todayCheckIn.feeling}</strong> today. Thanks for showing up.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            onClick={() => handleCheckIn('Stressed')}
+                            disabled={isCheckingIn}
+                            className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <div className="p-1.5 rounded-full bg-red-100 text-red-500 group-hover:scale-110 transition-transform shadow-sm">
+                              <Frown className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] font-bold text-muted-foreground group-hover:text-red-600 uppercase">Stressed</span>
+                          </button>
 
-                        <button className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-yellow-200 hover:bg-yellow-50 transition-all cursor-pointer">
-                          <div className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <Meh className="w-4 h-4" />
-                          </div>
-                          <span className="text-[10px] font-bold text-muted-foreground group-hover:text-yellow-700 uppercase">Okay</span>
-                        </button>
+                          <button
+                            onClick={() => handleCheckIn('Okay')}
+                            disabled={isCheckingIn}
+                            className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-yellow-200 hover:bg-yellow-50 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <div className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 group-hover:scale-110 transition-transform shadow-sm">
+                              <Meh className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] font-bold text-muted-foreground group-hover:text-yellow-700 uppercase">Okay</span>
+                          </button>
 
-                        <button className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-green-200 hover:bg-green-50 transition-all cursor-pointer">
-                          <div className="p-1.5 rounded-full bg-green-100 text-green-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <Smile className="w-4 h-4" />
-                          </div>
-                          <span className="text-[10px] font-bold text-muted-foreground group-hover:text-green-700 uppercase">Great</span>
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => handleCheckIn('Great')}
+                            disabled={isCheckingIn}
+                            className="group flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-transparent hover:border-green-200 hover:bg-green-50 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <div className="p-1.5 rounded-full bg-green-100 text-green-600 group-hover:scale-110 transition-transform shadow-sm">
+                              <Smile className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] font-bold text-muted-foreground group-hover:text-green-700 uppercase">Great</span>
+                          </button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="text-base">Journal Entry</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground italic mb-3">
-                        "Today I felt a bit anxious about work, but the breathing exercise really helped center me."
+                        {journalEntries.length > 0
+                          ? `"${journalEntries[0].content.slice(0, 100)}${journalEntries[0].content.length > 100 ? '...' : ''}"`
+                          : "You haven't written a journal entry yet. Your most recent reflection will appear here."}
                       </p>
-                      
+
                       <Dialog open={isJournalOpen} onOpenChange={setIsJournalOpen}>
                         <DialogTrigger asChild>
                           <Button variant="link" className="p-0 h-auto text-primary gap-1">
@@ -636,7 +912,13 @@ export default function Profile() {
                             </div>
                           </div>
                           <DialogFooter>
-                            <Button onClick={handleSaveJournal} className="rounded-full">Save Entry (+20 XP)</Button>
+                            <Button onClick={handleSaveJournal} disabled={isSavingJournal || !journalEntry.trim()} className="rounded-full">
+                              {isSavingJournal ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                              ) : (
+                                "Save Entry"
+                              )}
+                            </Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
@@ -652,28 +934,36 @@ export default function Profile() {
                     <CardDescription>Time spent in mindfulness practice</CardDescription>
                   </CardHeader>
                   <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={ACTIVITY_DATA}>
-                        <defs>
-                          <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                        <YAxis axisLine={false} tickLine={false} />
-                        <RechartsTooltip />
-                        <Area 
-                          type="monotone" 
-                          dataKey="mins" 
-                          stroke="#10B981" 
-                          strokeWidth={3}
-                          fillOpacity={1} 
-                          fill="url(#colorActivity)" 
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {activityChartData.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+                        <Activity className="w-10 h-10 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No mindfulness activity logged yet</p>
+                        <p className="text-sm text-muted-foreground">Try a quick breathing exercise to get started.</p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={activityChartData}>
+                          <defs>
+                            <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="day" axisLine={false} tickLine={false} />
+                          <YAxis axisLine={false} tickLine={false} />
+                          <RechartsTooltip />
+                          <Area
+                            type="monotone"
+                            dataKey="mins"
+                            stroke="#10B981"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorActivity)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -760,6 +1050,16 @@ export default function Profile() {
                                   ₹{parseFloat(session.totalCost).toFixed(0)}
                                 </p>
                               )}
+                              {session.status === 'completed' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadInvoice(session.id)}
+                                  disabled={downloadingInvoiceId === session.id}
+                                  className="text-xs text-primary underline mt-1 inline-block disabled:opacity-50"
+                                >
+                                  {downloadingInvoiceId === session.id ? "Preparing..." : "Download invoice"}
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -768,40 +1068,105 @@ export default function Profile() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              <TabsContent value="security" className="space-y-6">
+                <Card>
+                  <CardContent className="p-6 flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <h3 className="font-semibold">Are you a licensed professional?</h3>
+                      <p className="text-sm text-muted-foreground">Apply to join Focus as a professional. We'll review your credentials.</p>
+                    </div>
+                    <Link href="/apply-professional">
+                      <Button variant="outline" className="rounded-full shrink-0">Apply as Professional</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+                <AccountSecuritySettings mfaEnabled={!!(user as any)?.mfaEnabled} />
+              </TabsContent>
             </Tabs>
 
             <div className="space-y-4">
               <h2 className="text-xl font-bold font-serif">Upcoming Sessions</h2>
               <Card>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {[
-                      { title: "Therapy Session", with: "Dr. Ananya Sharma", time: "Today, 5:00 PM", type: "Video Call" },
-                      { title: "Yoga for Anxiety", with: "Guru Rajesh", time: "Tomorrow, 7:00 AM", type: "Live Class" },
-                    ].map((session, i) => (
-                      <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="bg-primary/10 p-3 rounded-full text-primary">
-                            <Calendar className="w-5 h-5" />
+                <CardContent className={upcomingSessions.length === 0 ? "py-8" : "p-0"}>
+                  {upcomingSessions.length === 0 ? (
+                    <div className="text-center">
+                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                      <p className="text-muted-foreground">No upcoming sessions scheduled</p>
+                      <Link href="/therapists">
+                        <Button className="mt-4 rounded-full">Book a Session</Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {upcomingSessions.map((session) => (
+                        <div key={session.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="bg-primary/10 p-3 rounded-full text-primary">
+                              <Calendar className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold">
+                                {session.type?.charAt(0).toUpperCase() + session.type?.slice(1)} Session
+                              </h4>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold">{session.title}</h4>
-                            <p className="text-sm text-muted-foreground">with {session.with}</p>
+                          <div className="text-right flex items-center gap-3">
+                            <div>
+                              <p className="font-medium">
+                                {new Date(session.scheduledAt).toLocaleString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                              <Badge variant="outline" className="mt-1">{session.type}</Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setSessionToCancel(session.id)}
+                              data-testid={`button-cancel-session-${session.id}`}
+                            >
+                              Cancel
+                            </Button>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{session.time}</p>
-                          <Badge variant="outline" className="mt-1">{session.type}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
         </div>
       </div>
+
+      <Dialog open={!!sessionToCancel} onOpenChange={(next) => { if (!next) setSessionToCancel(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel this session?</DialogTitle>
+            <DialogDescription>
+              If you're within the cancellation window, your payment is refunded automatically. If it's too close to
+              the session time, cancellation may not be allowed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSessionToCancel(null)} disabled={cancelBookingMutation.isPending}>
+              Keep Session
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => sessionToCancel && cancelBookingMutation.mutate(sessionToCancel)}
+              disabled={cancelBookingMutation.isPending}
+            >
+              {cancelBookingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cancel Session"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageTransition>
   );
 }

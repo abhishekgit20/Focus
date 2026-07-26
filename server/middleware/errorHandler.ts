@@ -1,6 +1,18 @@
 // Enhanced error handling for production
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { MulterError } from "multer";
+
+// Multer's own error codes, mapped to a message the uploader can actually
+// act on — these previously fell through to the generic "unexpected error"
+// branch below and returned a bare "Internal server error", so a user who
+// picked a 9MB file (or too many files) had no idea why their submission
+// failed.
+const MULTER_ERROR_MESSAGES: Record<string, string> = {
+  LIMIT_FILE_SIZE: "File too large. Please upload a file under 8MB.",
+  LIMIT_FILE_COUNT: "Too many files. Please reduce the number of files and try again.",
+  LIMIT_UNEXPECTED_FILE: "Unexpected file field. Please only upload the requested document types.",
+};
 
 export class AppError extends Error {
   constructor(
@@ -61,6 +73,15 @@ export function errorHandler(
   next: NextFunction
 ) {
   const requestId = (req as any).requestId || "unknown";
+
+  // Handle Multer upload errors (file too large, too many files, etc.)
+  if (err instanceof MulterError) {
+    return res.status(400).json({
+      error: MULTER_ERROR_MESSAGES[err.code] || "File upload failed. Please check your file and try again.",
+      code: err.code,
+      requestId,
+    });
+  }
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {

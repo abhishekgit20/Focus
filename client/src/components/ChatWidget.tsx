@@ -9,46 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
-import { Send, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { Send, Sparkles, Volume2, VolumeX, Loader2, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
-
-interface Message {
-  role: string;
-  text: string;
-  sanskrit?: string;
-  purport?: string;
-  source?: string;
-}
-
-interface ConversationMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-const CRISIS_KEYWORDS = [
-  'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die', 
-  'self harm', 'self-harm', 'hurt myself', 'cutting myself',
-  'no reason to live', 'better off dead', 'death wish', 'ending it all',
-  'आत्महत्या', 'मरना चाहता', 'मरना चाहती', 'जीना नहीं चाहता', 'खुद को मारना'
-];
-
-const CRISIS_RESPONSE = {
-  text: `🚨 I'm very concerned about what you've shared. Your life matters, and help is available right now.
-
-**Emergency Helplines (India):**
-📞 iCall: 9152987821 (Mon-Sat, 8am-10pm)
-📞 Vandrevala Foundation: 1860-2662-345 (24/7)
-📞 NIMHANS: 080-46110007 (24/7)
-📞 Snehi: 044-24640050 (24/7)
-
-Please reach out immediately. If in danger, call 112. You are not alone. 💙`,
-  source: "Crisis Support"
-};
-
-const checkForCrisis = (text: string): boolean => {
-  const lowerText = text.toLowerCase();
-  return CRISIS_KEYWORDS.some(keyword => lowerText.includes(keyword.toLowerCase()));
-};
+import { useCompanionChat } from "@/hooks/useCompanionChat";
+import { renderFormattedText } from "@/lib/chatFormatting";
 
 const detectLanguage = (text: string): { lang: string; code: string } => {
   const langPatterns = [
@@ -72,17 +36,13 @@ const detectLanguage = (text: string): { lang: string; code: string } => {
 };
 
 export function ChatWidget() {
-  const [messages, setMessages] = useState<Message[]>([
-    { 
-      role: "bot", 
-      text: "Namaste! I am your companion for peace and clarity, powered by ChatGPT and the wisdom of the Bhagavad Gita. What is troubling your mind today?",
-      source: "Gita Bot • Powered by ChatGPT"
-    }
-  ]);
+  const { messages, isTyping, isLoadingHistory, sendMessage } = useCompanionChat({
+    role: "bot",
+    text: "Namaste! I am your companion for peace and clarity, powered by ChatGPT and the wisdom of the Bhagavad Gita. What is troubling your mind today?",
+    source: "Gita Bot • Powered by ChatGPT"
+  });
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -168,63 +128,10 @@ export function ChatWidget() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    
+
     const userMessage = input.trim();
-    setMessages(prev => [...prev, { role: "user", text: userMessage }]);
     setInput("");
-    
-    if (checkForCrisis(userMessage)) {
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          role: "bot", 
-          text: CRISIS_RESPONSE.text,
-          source: CRISIS_RESPONSE.source
-        }]);
-        setIsTyping(false);
-      }, 500);
-      return;
-    }
-    
-    setIsTyping(true);
-
-    try {
-      const response = await fetch('/api/public-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          conversationHistory: conversationHistory
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to get response');
-
-      const data = await response.json();
-      
-      setConversationHistory(prev => [
-        ...prev,
-        { role: 'user', content: userMessage },
-        { role: 'assistant', content: data.response }
-      ]);
-
-      setMessages(prev => [...prev, { 
-        role: "bot", 
-        text: data.response,
-        source: data.bhagavadGitaReference 
-          ? `Bhagavad Gita: ${data.bhagavadGitaReference}` 
-          : "Focus Wisdom Bot • Powered by ChatGPT"
-      }]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => [...prev, { 
-        role: "bot", 
-        text: "I apologize, but I'm having trouble connecting. Please try again.",
-        source: "System Message"
-      }]);
-    } finally {
-      setIsTyping(false);
-    }
+    await sendMessage(userMessage);
   };
 
   return (
@@ -259,6 +166,11 @@ export function ChatWidget() {
 
         <ScrollArea className="flex-grow p-4 bg-slate-50/50">
           <div className="space-y-4" ref={scrollRef}>
+            {isLoadingHistory && (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground py-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading your conversation...
+              </div>
+            )}
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'bot' && (
@@ -269,16 +181,23 @@ export function ChatWidget() {
                 
                 <div className={`
                   max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed shadow-sm flex flex-col gap-2
-                  ${msg.role === 'user' 
-                    ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                  ${msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground rounded-tr-none'
+                    : msg.isCrisis
+                    ? 'bg-destructive/5 border-2 border-destructive/40 rounded-tl-none text-foreground'
                     : 'bg-white border rounded-tl-none text-foreground'}
                 `}>
+                  {msg.isCrisis && (
+                    <div className="flex items-center gap-2 text-destructive font-semibold text-xs">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Crisis Support
+                    </div>
+                  )}
                   {msg.sanskrit && (
                     <p className="font-serif text-primary/80 italic text-xs border-l-2 border-primary/20 pl-2">
                       {msg.sanskrit}
                     </p>
                   )}
-                  <p className="whitespace-pre-line">{msg.text}</p>
+                  <p className="whitespace-pre-line">{renderFormattedText(msg.text, msg.isCrisis)}</p>
                   {msg.purport && (
                     <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                       <strong>Insight:</strong> {msg.purport}
@@ -333,11 +252,12 @@ export function ChatWidget() {
               className="rounded-full bg-muted/30 focus-visible:ring-primary pl-4"
               disabled={isTyping}
             />
-            <Button 
+            <Button
               type="submit"
-              size="icon" 
+              size="icon"
               className="rounded-full bg-primary hover:bg-primary/90 shrink-0"
               disabled={!input.trim() || isTyping}
+              aria-label="Send message"
             >
               <Send className="w-4 h-4" />
             </Button>

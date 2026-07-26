@@ -63,26 +63,17 @@ export function FilterPanel({ onApplyFilters }: { onApplyFilters?: (filters: Rec
       ]
     },
     {
-      id: "availability",
-      label: "Availability",
-      options: [
-        "Today", "Morning", "Afternoon", "Evening", "Weekend"
-      ]
-    },
-    {
       id: "gender",
       label: "Gender Preference",
       options: [
-        "Male", "Female", "No preference"
-      ]
-    },
-    {
-      id: "mode",
-      label: "Mode of Session",
-      options: [
-        "Video Call", "Audio Call", "Chat", "In-person"
+        "Male", "Female"
       ]
     }
+    // "Availability" (Today/Morning/etc.) and "Mode of Session" (Video/Audio/
+    // Chat/In-person) categories were removed here — they had no backing data
+    // in getAllProfessionals() (working-hours/offering-type aren't part of
+    // that response), so every combination silently matched nothing users
+    // could see was ignored. Re-add once that data is actually returned.
   ];
 
   const handleFilterChange = (categoryId: string, option: string) => {
@@ -105,10 +96,11 @@ export function FilterPanel({ onApplyFilters }: { onApplyFilters?: (filters: Rec
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
+        <Button
+          variant="outline"
+          size="icon"
           className="relative rounded-full border-2 border-[#90CAF9] bg-[#FAFAF5] hover:bg-[#E3F2FD] text-[#1565C0] transition-all duration-300"
+          aria-label={totalFilters > 0 ? `Filters, ${totalFilters} active` : "Filters"}
         >
           <Filter className="w-5 h-5" />
           {totalFilters > 0 && (

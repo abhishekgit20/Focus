@@ -24,6 +24,15 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+# Defense-in-depth: the app's own date math (server/lib/istDate.ts) no longer
+# depends on the server's local clock, but this still protects anything else
+# that calls Date's local getHours()/toLocaleString()/etc. (e.g. log
+# timestamps) from silently reflecting UTC instead of the business's actual
+# timezone. Alpine ships no tzdata by default, so TZ alone would be a no-op
+# without installing it first.
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Kolkata
+
 ENV NODE_ENV=production
 ENV PORT=5000
 

@@ -5,11 +5,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageTransition } from "@/components/PageTransition";
-import { Eye, EyeOff, Mail, ArrowLeft, Loader2, Shield } from "lucide-react";
+import { Eye, EyeOff, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import { register } from "@/lib/api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import heroBg from "@assets/generated_images/therapist_and_client_session.png";
+
+// Mirrors server/security/passwordPolicy.ts's real requirements (minus the
+// common-password blocklist, which stays server-only rather than duplicated
+// here) — the client used to only require 6 characters while the server
+// actually required 10 + variety, so a user could fill out the entire form
+// and only learn the real rule after submitting.
+function checkPasswordStrength(password: string, email: string): { valid: boolean; reason?: string } {
+  if (password.length < 10) {
+    return { valid: false, reason: "Password must be at least 10 characters long" };
+  }
+  if (password.length > 128) {
+    return { valid: false, reason: "Password is too long" };
+  }
+  const varietyCount = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter((re) => re.test(password)).length;
+  if (varietyCount < 3) {
+    return { valid: false, reason: "Password must include at least 3 of: lowercase letters, uppercase letters, numbers, symbols" };
+  }
+  const localPart = email.split("@")[0]?.toLowerCase();
+  if (localPart && localPart.length > 3 && password.toLowerCase().includes(localPart)) {
+    return { valid: false, reason: "Password must not contain your email address" };
+  }
+  return { valid: true };
+}
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -17,7 +40,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isProfessional, setIsProfessional] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -36,28 +59,36 @@ export default function Register() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
+    const strength = checkPasswordStrength(formData.password, formData.email);
+    if (!strength.valid) {
+      toast.error(strength.reason!);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast.error("Please agree to the Terms of Service and Privacy Policy to continue");
       setIsLoading(false);
       return;
     }
 
     try {
+      // Every public signup creates a 'client' account. Professionals join
+      // through the Apply as a Professional review flow after signing up —
+      // there is no self-service way to register directly as professional,
+      // admin, or super_admin.
       const response = await register({
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        role: isProfessional ? "professional" : "client",
       });
 
-      // Invalidate auth query to refetch user data from server
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       window.dispatchEvent(new Event('auth-change'));
 
       toast.success(`Welcome to Focus, ${response.user.fullName}!`);
 
-      // Redirect based on role
-      setLocation(response.user.role === 'professional' ? "/professional-dashboard" : "/profile");
+      setLocation("/profile");
     } catch (error: any) {
       toast.error(error.message || "Registration failed. Please try again.");
     } finally {
@@ -101,33 +132,6 @@ export default function Register() {
               </div>
               <p className="text-base text-muted-foreground">Join Focus and start your wellness journey.</p>
             </div>
-            
-            <div className="bg-muted/30 p-1 rounded-xl flex">
-              <button 
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!isProfessional ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setIsProfessional(false)}
-                type="button"
-              >
-                Client Signup
-              </button>
-              <button 
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${isProfessional ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setIsProfessional(true)}
-                type="button"
-              >
-                Professional Signup
-              </button>
-            </div>
-
-            {isProfessional && (
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-900 flex gap-3">
-                <Shield className="w-5 h-5 shrink-0 text-blue-600" />
-                <div>
-                  <p className="font-semibold mb-1">Strict Patient Privacy Policy</p>
-                  <p className="text-xs opacity-90">By registering, you agree to adhere to HIPAA & DISHA guidelines regarding patient confidentiality and data security.</p>
-                </div>
-              </div>
-            )}
 
             <form onSubmit={handleRegister} className="space-y-6">
               <div className="space-y-2">
@@ -170,7 +174,7 @@ export default function Register() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
-                    minLength={6}
+                    minLength={10}
                   />
                   <button
                     type="button"
@@ -180,7 +184,7 @@ export default function Register() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+                <p className="text-xs text-muted-foreground">At least 10 characters, with 3 of: uppercase, lowercase, numbers, symbols</p>
               </div>
 
               <div className="space-y-2">
@@ -194,7 +198,7 @@ export default function Register() {
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     required
-                    minLength={6}
+                    minLength={10}
                   />
                   <button
                     type="button"
@@ -206,10 +210,26 @@ export default function Register() {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="agreedToTerms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="agreedToTerms" className="text-sm font-normal text-muted-foreground leading-snug cursor-pointer">
+                  I agree to the{" "}
+                  <Link href="/terms" target="_blank" className="text-primary underline">Terms of Service</Link>
+                  {" "}and{" "}
+                  <Link href="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>,
+                  including how crisis/safety signals are handled.
+                </Label>
+              </div>
+
+              <Button
+                type="submit"
                 className="w-full h-12 text-base font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-lg hover:shadow-primary/25 transition-all duration-300"
-                disabled={isLoading}
+                disabled={isLoading || !agreedToTerms}
               >
                 {isLoading ? (
                   <>

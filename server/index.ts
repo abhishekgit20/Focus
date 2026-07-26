@@ -9,12 +9,21 @@ import { serveStatic } from "./static";
 import { setupAuth } from "./auth";
 import { createServer } from "http";
 import { WebhookHandlers } from './webhookHandlers';
-import { WebSocketServer, WebSocket } from "ws";
-import { parse } from "url";
+import { verifyWebhookSignature } from './razorpayClient';
+import { captureFromWebhook, releaseExpiredReservations } from './booking/paymentEngine';
+import { notifyIfInstantSessionNowPending } from './booking/notifications';
+import { startInstantSessionTimeoutSweep } from './realtime';
+import { runReconciliation } from './reconciliation';
+import { logSecurityEvent } from './security/events';
+import { setupWebSocketServer } from "./realtime";
 import { validateEnv } from "./env";
 import { securityHeaders, requestId, sanitizeInput } from "./middleware/security";
 import { collectMetrics, getMetrics } from "./middleware/monitoring";
 import { errorHandler } from "./middleware/errorHandler";
+import { testConnection } from "./db";
+import { storage } from "./storage";
+import { flagDispute } from "./booking/disputes";
+import crypto from "crypto";
 
 // Validate environment variables first
 validateEnv();
@@ -32,8 +41,20 @@ app.use(requestId);
 app.use(sanitizeInput);
 
 // Security and performance middleware
+// Previously reflected *any* origin back with credentials enabled in
+// non-production environments (cors' `origin: true`), which lets any site a
+// logged-in user has open in another tab make authenticated cross-origin
+// requests against this API. Pinned to the actual local dev origins instead.
+const DEV_ORIGINS = [
+  "http://localhost:5000",
+  "http://127.0.0.1:5000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? false : true),
+  origin: process.env.FRONTEND_URL
+    ?? (process.env.NODE_ENV === "production" ? false : DEV_ORIGINS),
   credentials: true,
   optionsSuccessStatus: 200,
 }));
@@ -44,133 +65,13 @@ app.use(compression());
 // Metrics collection
 app.use(collectMetrics);
 
-// Request size limit (10MB)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-
-// WebSocket Server for real-time chat
-const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
-
-interface ChatRoom {
-  clients: Map<string, { ws: WebSocket; role: "client" | "professional"; userId: string }>;
-}
-
-const chatRooms = new Map<string, ChatRoom>();
-
-interface WSMessage {
-  type: "join" | "message" | "leave" | "typing";
-  sessionId: string;
-  userId: string;
-  userRole: "client" | "professional";
-  content?: string;
-  timestamp?: string;
-}
-
-wss.on("connection", (ws, req) => {
-  const { query } = parse(req.url || "", true);
-  const sessionId = query.sessionId as string;
-  const userId = query.userId as string;
-  const userRole = query.role as "client" | "professional";
-
-  if (!sessionId || !userId || !userRole) {
-    ws.close(1008, "Missing required parameters");
-    return;
-  }
-
-  // Create or join room
-  if (!chatRooms.has(sessionId)) {
-    chatRooms.set(sessionId, { clients: new Map() });
-  }
-
-  const room = chatRooms.get(sessionId)!;
-  room.clients.set(userId, { ws, role: userRole, userId });
-
-  log(`User ${userId} (${userRole}) joined session ${sessionId}`, "websocket");
-
-  // Notify other participants
-  room.clients.forEach((client, id) => {
-    if (id !== userId && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(JSON.stringify({
-        type: "user_joined",
-        userId,
-        userRole,
-        timestamp: new Date().toISOString(),
-      }));
-    }
-  });
-
-  ws.on("message", (data) => {
-    try {
-      const message: WSMessage = JSON.parse(data.toString());
-      
-      // Broadcast to all clients in the room
-      room.clients.forEach((client, id) => {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.send(JSON.stringify({
-            type: message.type,
-            userId: message.userId,
-            userRole: message.userRole,
-            content: message.content,
-            timestamp: new Date().toISOString(),
-          }));
-        }
-      });
-    } catch (error) {
-      log(`WebSocket message error: ${error}`, "websocket");
-    }
-  });
-
-  ws.on("close", () => {
-    room.clients.delete(userId);
-    log(`User ${userId} left session ${sessionId}`, "websocket");
-
-    // Notify remaining participants
-    room.clients.forEach((client) => {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        const message = {
-          type: "user_left",
-          userId,
-          userRole,
-          timestamp: new Date().toISOString(),
-        };
-        log(`Sending user_left to ${client.userId} (${client.role}): ${JSON.stringify(message)}`, "websocket");
-        client.ws.send(JSON.stringify(message));
-      }
-    });
-
-    // Cleanup empty rooms
-    if (room.clients.size === 0) {
-      chatRooms.delete(sessionId);
-    }
-  });
-
-  ws.on("error", (error) => {
-    log(`WebSocket error for user ${userId}: ${error}`, "websocket");
-  });
-});
-
-declare module "http" {
-  interface IncomingMessage {
-    rawBody: unknown;
-  }
-}
-
-async function initStripe() {
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeSecretKey) {
-    console.log('STRIPE_SECRET_KEY not found, Stripe features will be disabled');
-    return;
-  }
-
-  try {
-    console.log('Stripe initialized (webhook endpoint: /api/stripe/webhook)');
-    console.log('Note: Configure your Stripe webhook endpoint in the Stripe Dashboard');
-    console.log('Webhook secret should be set in STRIPE_WEBHOOK_SECRET environment variable');
-  } catch (error) {
-    console.error('Failed to initialize Stripe:', error);
-  }
-}
-
+// Webhook routes need the raw request body for signature verification, so
+// they must be registered — with their own express.raw() middleware —
+// BEFORE the global express.json() below, which would otherwise consume and
+// parse the body first, leaving nothing for the signature check to verify
+// against. (This ordering bug previously affected the Stripe webhook: it
+// was registered after the global parser and would fail on every real call
+// with "Payload must be a Buffer" — fixed here by moving both up.)
 app.post(
   '/api/stripe/webhook',
   express.raw({ type: 'application/json', limit: '10mb' }),
@@ -202,16 +103,128 @@ app.post(
   }
 );
 
-// Note: JSON parsing is already configured above with compression
-// This is for webhook routes that need raw body
-app.use(
-  '/api/stripe/webhook',
-  express.json({
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
+app.post(
+  '/api/payments/razorpay-webhook',
+  express.raw({ type: 'application/json', limit: '10mb' }),
+  async (req, res) => {
+    const signature = req.headers['x-razorpay-signature'];
+    if (!signature || Array.isArray(signature)) {
+      return res.status(400).json({ error: 'Missing x-razorpay-signature' });
+    }
+    if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
+      console.error('RAZORPAY_WEBHOOK_SECRET not configured');
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+    if (!Buffer.isBuffer(req.body)) {
+      console.error('RAZORPAY WEBHOOK ERROR: req.body is not a Buffer');
+      return res.status(500).json({ error: 'Webhook processing error' });
+    }
+
+    const rawBody = (req.body as Buffer).toString('utf-8');
+    if (!verifyWebhookSignature(rawBody, signature)) {
+      await logSecurityEvent({ type: 'payment.verification_failed', req, metadata: { source: 'razorpay_webhook' } });
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    let event: any;
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      return res.status(400).json({ error: 'Malformed payload' });
+    }
+
+    // Razorpay webhook payloads have no reliable top-level unique event ID
+    // (unlike Stripe's evt_...) — a signature-verified payload's own content
+    // hash is a valid stand-in: a genuine gateway retry resends the exact
+    // same bytes, so the hash matches and this is skipped as already-seen.
+    const eventId = crypto.createHash('sha256').update(rawBody).digest('hex');
+    const logged = await storage.recordWebhookEventIfNew({
+      gateway: 'razorpay',
+      eventId,
+      eventType: event.event || 'unknown',
+      payload: event,
+      status: 'received',
+    });
+    if (!logged) {
+      console.log(`Razorpay event ${eventId} already logged, skipping (gateway redelivery)`);
+      return res.status(200).json({ received: true });
+    }
+
+    try {
+      if (event.event === 'payment.captured') {
+        const payment = event.payload?.payment?.entity;
+        if (payment?.order_id && payment?.id) {
+          const result = await captureFromWebhook(payment.order_id, payment.id);
+          const sessionId = result.bookingPayments?.[0]?.sessionId;
+          if (sessionId) await notifyIfInstantSessionNowPending(sessionId);
+        }
+      } else if (typeof event.event === 'string' && event.event.startsWith('payment.dispute.')) {
+        // Chargebacks must never be silently dropped — not automated
+        // end-to-end yet, but the affected booking gets flagged and an
+        // admin alert email goes out. Field names here follow Razorpay's
+        // documented payload.<entity>.entity nesting (same shape as
+        // payment.captured above); verify against a real dispute payload
+        // before relying on this in production, since none has fired yet.
+        const dispute = event.payload?.dispute?.entity;
+        if (dispute?.id) {
+          await flagDispute({
+            gateway: 'razorpay',
+            gatewayDisputeId: dispute.id,
+            gatewayPaymentId: dispute.payment_id ?? null,
+            reason: dispute.reason_code ?? dispute.reason ?? null,
+            amount: typeof dispute.amount === 'number' ? (dispute.amount / 100).toFixed(2) : '0.00',
+            status: dispute.status ?? event.event,
+            raw: dispute,
+          });
+        }
+      }
+      // Other event types (refund.processed, payment.failed, etc.) are
+      // handled by the synchronous checkout-callback / refund flows today;
+      // this webhook exists specifically as the fallback for a capture that
+      // completed after the browser disconnected.
+      await storage.markWebhookEventProcessed(logged.id);
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Razorpay webhook error:', error.message);
+      await storage.markWebhookEventFailed(logged.id, error.message);
+      // A real processing error (as opposed to a bad signature, already
+      // handled above) now returns 500 so Razorpay's own retry can recover
+      // a transient failure (DB blip, etc.) — the event log row is the
+      // backstop if retries are also exhausted, not a reason to suppress them.
+      res.status(500).json({ error: 'processing_error' });
+    }
+  }
 );
+
+// Request size limit (10MB)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// WebSocket server for real-time chat/call signaling and dashboard notifications
+setupWebSocketServer(httpServer);
+
+declare module "http" {
+  interface IncomingMessage {
+    rawBody: unknown;
+  }
+}
+
+async function initStripe() {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    console.log('STRIPE_SECRET_KEY not found, Stripe features will be disabled');
+    return;
+  }
+
+  try {
+    console.log('Stripe initialized (webhook endpoint: /api/stripe/webhook)');
+    console.log('Note: Configure your Stripe webhook endpoint in the Stripe Dashboard');
+    console.log('Webhook secret should be set in STRIPE_WEBHOOK_SECRET environment variable');
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
+  }
+}
+
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -282,6 +295,24 @@ app.use((req, res, next) => {
   await setupAuth(app);
   await registerRoutes(httpServer, app);
 
+  // Booking payment-reservation TTL sweep — no job queue exists in this app,
+  // so expired 'payment_pending' slot reservations are released by an
+  // in-process interval, same pattern as the existing metrics collection.
+  setInterval(() => {
+    releaseExpiredReservations().catch((err) => console.error("Reservation sweep failed:", err));
+  }, 30_000);
+  startInstantSessionTimeoutSweep();
+
+  // Daily gateway-vs-local-DB payment reconciliation. Same in-process
+  // interval pattern as the sweeps above — runs once shortly after boot
+  // (so a mismatch doesn't sit undetected for up to 24h after a deploy),
+  // then every 24h.
+  const RECONCILIATION_INTERVAL_MS = 24 * 60 * 60 * 1000;
+  setInterval(() => {
+    runReconciliation().catch((err) => console.error("Reconciliation run failed:", err));
+  }, RECONCILIATION_INTERVAL_MS);
+  runReconciliation().catch((err) => console.error("Reconciliation run failed:", err));
+
   // Health check endpoint (must be before error handler)
   app.get("/health", async (_req, res) => {
     try {
@@ -301,13 +332,21 @@ app.use((req, res, next) => {
     }
   });
 
-  // Metrics endpoint (protected in production)
+  // Metrics endpoint — gated on a real shared secret in production.
+  // Previously this only checked *that an Authorization header was present*,
+  // not its value, so any request with e.g. "Authorization: x" got in.
   app.get("/metrics", (req, res) => {
-    // In production, you might want to add authentication here
-    if (process.env.NODE_ENV === "production" && !req.headers.authorization) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (process.env.NODE_ENV === "production") {
+      const token = process.env.METRICS_TOKEN;
+      const provided = req.headers.authorization?.replace(/^Bearer\s+/i, "");
+      const authorized = !!token && !!provided
+        && token.length === provided.length
+        && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(provided));
+      if (!authorized) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
     }
-    
+
     res.json(getMetrics());
   });
 

@@ -305,10 +305,11 @@ export default function Recommendations() {
                 placeholder="Search topics (e.g., Yoga, Gita, Stress)..."
                 className="h-14 pl-6 rounded-full shadow-lg text-lg bg-background/80 backdrop-blur-sm border-primary/20 focus-visible:ring-primary"
               />
-              <Button 
+              <Button
                 onClick={handleSearch}
-                size="icon" 
+                size="icon"
                 className="absolute right-2 top-2 h-10 w-10 rounded-full bg-primary hover:bg-primary/90"
+                aria-label="Search"
               >
                 {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
               </Button>

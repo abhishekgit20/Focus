@@ -1,6 +1,6 @@
-# Serene Space - Complete Features Documentation
+# Focus - Complete Features Documentation
 
-**Project Name:** Serene Space (Focus)  
+**Project Name:** Focus  
 **Type:** Mental Health & Wellness Platform  
 **Version:** 1.0  
 **Date:** 2024
@@ -28,7 +28,7 @@
 
 ## Overview
 
-Serene Space is a comprehensive mental health platform designed specifically for the Indian market. It connects users with psychiatrists, psychologists, therapists, and yoga gurus through a unified digital platform. The application integrates modern therapeutic approaches with traditional Indian wisdom, particularly drawing from the Bhagavad Gita for AI-powered counseling support.
+Focus is a comprehensive mental health platform designed specifically for the Indian market. It connects users with psychiatrists, psychologists, therapists, and yoga gurus through a unified digital platform. The application integrates modern therapeutic approaches with traditional Indian wisdom, particularly drawing from the Bhagavad Gita for AI-powered counseling support.
 
 **Key Value Propositions:**
 - Accessible mental healthcare for 200+ million Indians
@@ -697,7 +697,7 @@ Serene Space is a comprehensive mental health platform designed specifically for
 
 ## Conclusion
 
-Serene Space is a comprehensive mental health platform with over 50 major features covering authentication, professional services, AI-powered counseling, payment processing, session management, journaling, reviews, admin tools, and more. The platform is designed to be culturally sensitive, accessible, and supportive of users' mental health journeys.
+Focus is a comprehensive mental health platform with over 50 major features covering authentication, professional services, AI-powered counseling, payment processing, session management, journaling, reviews, admin tools, and more. The platform is designed to be culturally sensitive, accessible, and supportive of users' mental health journeys.
 
 **Total Features Documented:** 50+ major features  
 **API Endpoints:** 30+ RESTful endpoints  

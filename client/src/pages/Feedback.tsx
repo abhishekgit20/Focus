@@ -272,14 +272,16 @@ export default function Feedback() {
 
               <div className="space-y-2">
                 <Label htmlFor="feedback">Your Feedback</Label>
-                <Textarea 
-                  id="feedback" 
-                  placeholder="What did you like? What can we improve? Your story matters." 
+                <Textarea
+                  id="feedback"
+                  placeholder="What did you like? What can we improve? Your story matters."
                   className="min-h-[150px] rounded-xl resize-none text-base p-4"
                   required
+                  maxLength={2000}
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground text-right">{feedbackText.length}/2000</p>
               </div>
 
               <div className="space-y-2">

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { CheckCircle2, XCircle, Clock, Star, Trash2, RefreshCw, Loader2, Shield } from "lucide-react";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,9 +32,13 @@ interface Feedback {
   createdAt: string;
 }
 
+const PAGE_SIZE = 50;
+
 export default function AdminFeedback() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -42,7 +47,7 @@ export default function AdminFeedback() {
   // Check if user is admin
   useEffect(() => {
     if (!isAuthLoading) {
-      if (!isAuthenticated || user?.role !== 'admin') {
+      if (!isAuthenticated || (user?.role !== 'admin' && user?.role !== 'super_admin')) {
         toast({
           title: "Access Denied",
           description: "This is an admin-only area. Redirecting to admin login...",
@@ -55,10 +60,15 @@ export default function AdminFeedback() {
     }
   }, [isAuthLoading, isAuthenticated, user, setLocation, toast]);
 
-  const fetchFeedback = async () => {
+  // Previously fetched every feedback row ever submitted with no limit at
+  // all — this now pages, so a growing table doesn't mean an ever-slower
+  // query and an ever-larger DOM on every load.
+  const fetchFeedback = async (offset = 0) => {
     try {
-      setIsLoading(true);
-      const response = await fetch("/api/admin/feedback", {
+      if (offset === 0) setIsLoading(true);
+      else setIsLoadingMore(true);
+
+      const response = await fetch(`/api/admin/feedback?limit=${PAGE_SIZE}&offset=${offset}`, {
         credentials: "include",
       });
 
@@ -72,7 +82,8 @@ export default function AdminFeedback() {
       }
 
       const data = await response.json();
-      setFeedback(data.feedback || []);
+      setFeedback((prev) => (offset === 0 ? data.feedback || [] : [...prev, ...(data.feedback || [])]));
+      setHasMore(!!data.hasMore);
     } catch (error: any) {
       console.error("Fetch feedback error:", error);
       toast({
@@ -82,13 +93,14 @@ export default function AdminFeedback() {
       });
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
   // Check if user is admin before fetching
   useEffect(() => {
     if (!isAuthLoading) {
-      if (!isAuthenticated || user?.role !== 'admin') {
+      if (!isAuthenticated || (user?.role !== 'admin' && user?.role !== 'super_admin')) {
         toast({
           title: "Access Denied",
           description: "This is an admin-only area. Redirecting to admin login...",
@@ -194,7 +206,7 @@ export default function AdminFeedback() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated || (user?.role !== 'admin' && user?.role !== 'super_admin')) {
     return (
       <PageTransition>
         <div className="min-h-screen flex items-center justify-center">
@@ -237,7 +249,7 @@ export default function AdminFeedback() {
             </div>
             <Button
               variant="outline"
-              onClick={fetchFeedback}
+              onClick={() => fetchFeedback()}
               disabled={isLoading}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
@@ -247,17 +259,17 @@ export default function AdminFeedback() {
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card>
+            <Card className="transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Pending Review
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{pendingFeedback.length}</div>
+                <div className="text-3xl font-bold"><AnimatedNumber value={pendingFeedback.length} /></div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Approved
@@ -265,11 +277,11 @@ export default function AdminFeedback() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600">
-                  {approvedFeedback.length}
+                  <AnimatedNumber value={approvedFeedback.length} />
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Rejected
@@ -277,7 +289,7 @@ export default function AdminFeedback() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-600">
-                  {rejectedFeedback.length}
+                  <AnimatedNumber value={rejectedFeedback.length} />
                 </div>
               </CardContent>
             </Card>
@@ -420,6 +432,14 @@ export default function AdminFeedback() {
                 </CardContent>
               </Card>
             ))
+          )}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={() => fetchFeedback(feedback.length)} disabled={isLoadingMore}>
+                {isLoadingMore ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Load More
+              </Button>
+            </div>
           )}
         </div>
       </div>

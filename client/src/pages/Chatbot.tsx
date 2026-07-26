@@ -6,62 +6,17 @@ import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
 import { Send, User, Sparkles, Loader2, Volume2, VolumeX, Mic, MicOff } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Message {
-  role: string;
-  text: string;
-  sanskrit?: string;
-  purport?: string;
-  source?: string;
-  isThinking?: boolean;
-}
-
-interface ConversationMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-const CRISIS_KEYWORDS = [
-  'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die', 
-  'self harm', 'self-harm', 'hurt myself', 'cutting myself',
-  'no reason to live', 'better off dead', 'death wish', 'ending it all',
-  'आत्महत्या', 'मरना चाहता', 'मरना चाहती', 'जीना नहीं चाहता', 'खुद को मारना'
-];
-
-const CRISIS_RESPONSE = {
-  text: `🚨 I'm very concerned about what you've shared. Your life matters, and help is available right now.
-
-**Emergency Helplines (India):**
-📞 **iCall**: 9152987821 (Mon-Sat, 8am-10pm)
-📞 **Vandrevala Foundation**: 1860-2662-345 (24/7)
-📞 **NIMHANS**: 080-46110007 (24/7)
-📞 **Snehi**: 044-24640050 (24/7)
-
-**Please reach out to one of these numbers immediately.** They have trained counselors who understand what you're going through.
-
-If you're in immediate danger, please call **112** (Emergency) or go to your nearest hospital.
-
-You are not alone. There are people who care about you and want to help. 💙`,
-  source: "Crisis Support • Please Reach Out",
-  isCrisis: true
-};
-
-const checkForCrisis = (text: string): boolean => {
-  const lowerText = text.toLowerCase();
-  return CRISIS_KEYWORDS.some(keyword => lowerText.includes(keyword.toLowerCase()));
-};
+import { useCompanionChat } from "@/hooks/useCompanionChat";
+import { renderFormattedText } from "@/lib/chatFormatting";
+import { AlertTriangle } from "lucide-react";
 
 export default function Chatbot() {
-  const [messages, setMessages] = useState<Message[]>([
-    { 
-      role: "bot", 
-      text: "Namaste! I am your companion for peace and clarity, powered by advanced AI and the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind. I'm here to listen and offer guidance.",
-      source: "Gita Bot • Powered by ChatGPT"
-    }
-  ]);
+  const { messages, isTyping, isLoadingHistory, sendMessage } = useCompanionChat({
+    role: "bot",
+    text: "Namaste! I am your companion for peace and clarity, powered by advanced AI and the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind. I'm here to listen and offer guidance.",
+    source: "Gita Bot • Powered by ChatGPT"
+  });
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -247,75 +202,13 @@ export default function Chatbot() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    
+
     // Stop listening if active
     stopListening();
-    
+
     const userMessage = input.trim();
-    const userMsg = { role: "user", text: userMessage };
-    setMessages(prev => [...prev, userMsg]);
     setInput("");
-    
-    if (checkForCrisis(userMessage)) {
-      setIsTyping(true);
-      setTimeout(() => {
-        const crisisMsg = {
-          role: "bot",
-          text: CRISIS_RESPONSE.text,
-          source: CRISIS_RESPONSE.source
-        };
-        setMessages(prev => [...prev, crisisMsg]);
-        setIsTyping(false);
-      }, 500);
-      return;
-    }
-    
-    setIsTyping(true);
-
-    try {
-      const response = await fetch('/api/public-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          conversationHistory: conversationHistory
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const data = await response.json();
-      
-      setConversationHistory(prev => [
-        ...prev,
-        { role: 'user', content: userMessage },
-        { role: 'assistant', content: data.response }
-      ]);
-
-      const botResponse = {
-        role: "bot",
-        text: data.response,
-        source: data.bhagavadGitaReference 
-          ? `Bhagavad Gita Reference: ${data.bhagavadGitaReference}` 
-          : "Focus Wisdom Bot • Powered by ChatGPT"
-      };
-
-      setMessages(prev => [...prev, botResponse]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      const errorResponse = {
-        role: "bot",
-        text: "I apologize, but I'm having trouble connecting right now. Please try again in a moment. If you need immediate support, please reach out to a professional therapist.",
-        source: "System Message"
-      };
-      setMessages(prev => [...prev, errorResponse]);
-    } finally {
-      setIsTyping(false);
-    }
+    await sendMessage(userMessage);
   };
 
   return (
@@ -344,6 +237,11 @@ export default function Chatbot() {
           {/* Messages Area */}
           <ScrollArea className="flex-grow bg-slate-50/50 relative z-10">
             <div className="p-6 space-y-6" ref={scrollRef}>
+              {isLoadingHistory && (
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground py-2">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Loading your conversation...
+                </div>
+              )}
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'bot' && (
@@ -354,16 +252,23 @@ export default function Chatbot() {
                   
                   <div className={`
                     max-w-[85%] rounded-2xl p-5 text-sm leading-relaxed shadow-sm
-                    ${msg.role === 'user' 
-                      ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                    ${msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground rounded-tr-none'
+                      : msg.isCrisis
+                      ? 'bg-destructive/5 border-2 border-destructive/40 rounded-tl-none text-foreground'
                       : 'bg-white border rounded-tl-none text-foreground'}
                   `}>
+                    {msg.isCrisis && (
+                      <div className="flex items-center gap-2 text-destructive font-semibold mb-2 text-sm">
+                        <AlertTriangle className="w-4 h-4 shrink-0" /> Crisis Support
+                      </div>
+                    )}
                     {msg.sanskrit && (
                       <p className="font-serif text-primary/80 mb-2 italic text-xs border-l-2 border-primary/20 pl-2">
                         {msg.sanskrit}
                       </p>
                     )}
-                    <p>{msg.text}</p>
+                    <p className="whitespace-pre-line">{renderFormattedText(msg.text, msg.isCrisis)}</p>
                     {msg.purport && (
                       <p className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                         <strong>Insight:</strong> {msg.purport}
@@ -440,15 +345,17 @@ export default function Chatbot() {
                   }`}
                   disabled={isTyping}
                   title={isListening ? "Stop listening" : "Voice input (optional)"}
+                  aria-label={isListening ? "Stop listening" : "Voice input"}
                 >
                   {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
               )}
-              <Button 
+              <Button
                 onClick={handleSend}
-                size="icon" 
+                size="icon"
                 className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 shrink-0"
                 disabled={isTyping || !input.trim() || isListening}
+                aria-label="Send message"
               >
                 {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </Button>

@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/lib/api";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,11 +79,13 @@ export function Navbar() {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
           {isAuthenticated ? (
+            <>
+            <NotificationBell />
             <DropdownMenu onOpenChange={(open) => {
               if (open) window.dispatchEvent(new Event('hide-crisis-banner'));
             }}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full w-9 h-9">
+                <Button variant="ghost" size="icon" className="rounded-full w-9 h-9" aria-label="Account menu">
                   <Avatar className="w-9 h-9 border border-primary/20">
                     <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                       {user?.fullName 
@@ -93,10 +96,24 @@ export function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {user?.role === 'admin' ? (
-                  <Link href="/admin/feedback">
-                    <DropdownMenuItem className="cursor-pointer">Admin Dashboard</DropdownMenuItem>
-                  </Link>
+                {user?.role === 'admin' || user?.role === 'super_admin' ? (
+                  <>
+                    <Link href="/admin/feedback">
+                      <DropdownMenuItem className="cursor-pointer">Admin Dashboard</DropdownMenuItem>
+                    </Link>
+                    <Link href="/admin/applications">
+                      <DropdownMenuItem className="cursor-pointer">Professional Applications</DropdownMenuItem>
+                    </Link>
+                    <Link href="/admin/payments">
+                      <DropdownMenuItem className="cursor-pointer">Payments & Refunds</DropdownMenuItem>
+                    </Link>
+                    <Link href="/admin/crisis-alerts">
+                      <DropdownMenuItem className="cursor-pointer text-red-600">Crisis Alerts</DropdownMenuItem>
+                    </Link>
+                    <Link href="/admin/analytics">
+                      <DropdownMenuItem className="cursor-pointer">Analytics</DropdownMenuItem>
+                    </Link>
+                  </>
                 ) : user?.role === 'professional' ? (
                   <Link href="/professional-dashboard">
                     <DropdownMenuItem className="cursor-pointer">Professional Dashboard</DropdownMenuItem>
@@ -117,6 +134,7 @@ export function Navbar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             <Link href="/login">
               <Button variant="default" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6">
@@ -148,10 +166,24 @@ export function Navbar() {
           ))}
           {isAuthenticated ? (
             <>
-              {user?.role === 'admin' ? (
-                <Link href="/admin/feedback" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
-                  Admin Dashboard
-                </Link>
+              {user?.role === 'admin' || user?.role === 'super_admin' ? (
+                <>
+                  <Link href="/admin/feedback" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    Admin Dashboard
+                  </Link>
+                  <Link href="/admin/applications" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    Professional Applications
+                  </Link>
+                  <Link href="/admin/payments" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    Payments & Refunds
+                  </Link>
+                  <Link href="/admin/crisis-alerts" className="text-lg font-medium py-2 text-red-600" onClick={() => setIsOpen(false)}>
+                    Crisis Alerts
+                  </Link>
+                  <Link href="/admin/analytics" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    Analytics
+                  </Link>
+                </>
               ) : user?.role === 'professional' ? (
                 <Link href="/professional-dashboard" className="text-lg font-medium py-2 text-muted-foreground" onClick={() => setIsOpen(false)}>
                   Dashboard

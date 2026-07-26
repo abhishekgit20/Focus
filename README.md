@@ -1,4 +1,4 @@
-# Serene Space - Mental Health & Wellness Platform
+# Focus - Mental Health & Wellness Platform
 
 A comprehensive mental health platform designed to connect users with psychiatrists, psychologists, therapists, and yoga gurus through a unified digital platform. The application integrates modern therapeutic approaches with traditional Indian wisdom, particularly drawing from the Bhagavad Gita for AI-powered counseling support.
 

@@ -12,13 +12,13 @@ export function Footer() {
           Connecting you with verified professionals and ancient wisdom.
         </p>
         <div className="flex justify-center gap-6 text-sm text-muted-foreground">
-          <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-          <a href="#" className="hover:text-primary transition-colors">Terms</a>
-          <a href="#" className="hover:text-primary transition-colors">Contact</a>
+          <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+          <a href="mailto:support@focus.example.com" className="hover:text-primary transition-colors">Contact</a>
           <Link href="/feedback" className="hover:text-primary transition-colors">Feedback</Link>
         </div>
         <p className="mt-8 text-xs text-muted-foreground/50">
-          © 2025 Focus India. All rights reserved.
+          © {new Date().getFullYear()} Focus India. All rights reserved.
         </p>
       </div>
     </footer>

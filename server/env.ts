@@ -11,6 +11,13 @@ const envSchema = z.object({
   // Optional but recommended
   BASE_URL: z.string().url().optional(),
   FRONTEND_URL: z.string().url().optional(),
+  // Enforced separately (fail-fast on import) by server/security/encryption.ts
+  // and the /metrics auth check in server/index.ts respectively — listed
+  // here mainly so they show up in .env.example-style tooling.
+  FIELD_ENCRYPTION_KEY: z.string().optional(),
+  METRICS_TOKEN: z.string().optional(),
+  CAPTCHA_SECRET_KEY: z.string().optional(),
+  CAPTCHA_VERIFY_URL: z.string().url().optional(),
   
   // Payment providers (optional)
   STRIPE_SECRET_KEY: z.string().optional(),
@@ -18,7 +25,14 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
-  
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+  // Booking/payment engine (optional, sensible defaults applied where read)
+  PLATFORM_COMMISSION_RATE: z.string().regex(/^0(\.\d+)?$/).optional(), // fraction, e.g. '0.15' = 15%
+  GST_RATE: z.string().regex(/^0(\.\d+)?$/).optional(), // fraction, e.g. '0.18' = 18%
+  PAYMENT_RESERVATION_TTL_MS: z.string().regex(/^\d+$/).optional(),
+  CANCELLATION_WINDOW_HOURS: z.string().regex(/^\d+$/).optional(),
+
   // OAuth (optional)
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -26,10 +40,27 @@ const envSchema = z.object({
   // AI services (optional)
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
-  
-  // Replit (optional)
-  REPL_ID: z.string().optional(),
-  REPL_SLUG: z.string().optional(),
+
+  // Crisis alert emails (optional)
+  RESEND_API_KEY: z.string().optional(),
+  CRISIS_ALERT_EMAIL: z.string().optional(),
+  CRISIS_ALERT_FROM_EMAIL: z.string().optional(),
+
+  // WebRTC TURN relay for voice/video sessions (optional — calls fall back to
+  // STUN-only, which works on most home networks but fails behind symmetric
+  // NATs/restrictive firewalls without it). From a Cloudflare Calls TURN app:
+  // dash.cloudflare.com -> Calls -> TURN.
+  CLOUDFLARE_TURN_KEY_ID: z.string().optional(),
+  CLOUDFLARE_TURN_API_TOKEN: z.string().optional(),
+
+  // Cloudflare R2 (S3-compatible) storage for professional verification
+  // documents (optional — falls back to local disk, which does NOT survive
+  // a redeploy on Railway/Fly/Render/etc. Required before real professional
+  // applications go through in production). dash.cloudflare.com -> R2.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

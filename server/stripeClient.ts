@@ -12,7 +12,7 @@ export async function getStripeClient(): Promise<Stripe> {
     }
     
     stripeClient = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2025-11-17.clover',
     });
   }
   return stripeClient;
@@ -26,7 +26,7 @@ export async function getUncachableStripeClient(): Promise<Stripe> {
   }
   
   return new Stripe(secretKey, {
-    apiVersion: '2024-12-18.acacia',
+    apiVersion: '2025-11-17.clover',
   });
 }
 

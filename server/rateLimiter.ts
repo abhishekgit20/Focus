@@ -29,6 +29,27 @@ export const signupLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Password reset request/confirm has its own budget, separate from login —
+// a user locked out of login by typos should still be able to request a
+// reset without also being blocked by that same counter.
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: "Too many password reset attempts, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// MFA enroll/verify/disable — separate from login and password reset for
+// the same reason.
+export const mfaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: "Too many MFA attempts, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Rate limiter for OAuth endpoints
 export const oauthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

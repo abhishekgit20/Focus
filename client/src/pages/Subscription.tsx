@@ -10,10 +10,11 @@ export default function Subscription() {
   const { toast } = useToast();
 
   const handleSubscribe = (plan: string) => {
-    // This is a mock handler. In full stack, this will redirect to Stripe Checkout
+    // Subscription billing isn't built yet - no Stripe recurring-billing integration
+    // exists behind this page. Be honest about that instead of faking a checkout redirect.
     toast({
-      title: "Redirecting to Secure Gateway",
-      description: `Initiating secure payment for ${plan} plan via Stripe...`,
+      title: "Coming soon",
+      description: `Subscriptions aren't live yet. We'll let you know as soon as the ${plan} plan is available.`,
     });
   };
 
@@ -67,11 +68,12 @@ export default function Subscription() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-              Secure Payments
+              Coming Soon
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold mb-6 font-serif">Invest in Your Peace of Mind</h1>
             <p className="text-xl text-muted-foreground">
-              Choose a plan that fits your journey. All payments are secured with bank-grade encryption and processed via Stripe.
+              Here's what we're planning. Subscriptions aren't live yet — let us know which plan you're
+              interested in and we'll notify you the moment it launches.
             </p>
           </div>
 
@@ -109,7 +111,7 @@ export default function Subscription() {
                     size="lg"
                     onClick={() => handleSubscribe(plan.name)}
                   >
-                    Get Started
+                    Notify Me When Available
                   </Button>
                 </CardFooter>
               </Card>
@@ -122,10 +124,11 @@ export default function Subscription() {
               <div>
                 <h3 className="text-2xl font-bold mb-6 font-serif flex items-center gap-2">
                   <Shield className="w-8 h-8 text-green-600" />
-                  Bank-Grade Security
+                  Built on Bank-Grade Security
                 </h3>
                 <p className="text-muted-foreground mb-8">
-                  Your financial data is never stored on our servers. We use Stripe, a globally trusted payment processor, to handle all transactions with AES-256 encryption.
+                  When subscriptions launch, we'll process payments through Stripe — a globally trusted
+                  payment processor — so your financial data is never stored on our own servers.
                 </p>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="flex items-start gap-3">
@@ -139,7 +142,7 @@ export default function Subscription() {
                     <CreditCard className="w-5 h-5 text-primary mt-1" />
                     <div>
                       <h4 className="font-semibold mb-1">Secure Checkout</h4>
-                      <p className="text-sm text-muted-foreground">PCI-DSS Level 1 Service Provider compliance.</p>
+                      <p className="text-sm text-muted-foreground">Backed by Stripe's PCI-DSS Level 1 compliant infrastructure.</p>
                     </div>
                   </div>
                 </div>

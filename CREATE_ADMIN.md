@@ -1,29 +1,39 @@
 # Create Admin User
 
-The admin user doesn't exist in your database yet. Here are 3 ways to create it:
+The recommended way to create the admin user is the built-in script, which generates a random password (shown once in the console) instead of a fixed one.
 
-## Option 1: Using Registration Endpoint (Easiest)
+## Option 1: Run the Admin Creation Script (Recommended)
 
-Since the registration endpoint currently only allows 'client' or 'professional' roles, you'll need to temporarily modify it or use Option 2/3.
+Make sure your `.env` file has `DATABASE_URL` set, then run:
 
-## Option 2: Direct SQL Query (Recommended)
+```bash
+npm run create-admin
+```
 
-Connect to your PostgreSQL database and run:
+This connects through the app's own database layer (`server/createAdmin.ts`), checks whether an admin already exists for `admin@focus.com` (override with the `ADMIN_EMAIL` env var), and if not, creates one with a freshly generated random password printed to the console **once**. Save it in a password manager immediately — change it after first login.
+
+## Option 2: Run the Seed Script (creates full sample data)
+
+```bash
+npx tsx server/seed.ts
+```
+
+This is for **local development only** — it creates an admin plus sample client/professional accounts with a fixed demo password. Do not run this against a production database.
+
+## Option 3: Direct SQL (advanced)
+
+If you need to create the admin manually against a database directly, hash a password with bcrypt yourself and insert it:
+
+```bash
+node -e "const bcrypt=require('bcryptjs');bcrypt.hash('YOUR-OWN-STRONG-PASSWORD',10).then(h=>console.log(h))"
+```
 
 ```sql
--- First, check if admin exists
-SELECT * FROM users WHERE email = 'admin@focus.com';
-
--- If it doesn't exist, create it (password is 'password123' hashed)
--- You'll need to hash the password first. Use this Node.js one-liner:
--- node -e "const bcrypt=require('bcryptjs');bcrypt.hash('password123',10).then(h=>console.log(h))"
-
--- Or use this SQL (if you have pgcrypto extension):
 INSERT INTO users (id, email, password, role, full_name, phone, created_at, updated_at)
 VALUES (
   gen_random_uuid(),
   'admin@focus.com',
-  '$2a$10$rOzJqZqZqZqZqZqZqZqZqOqZqZqZqZqZqZqZqZqZqZqZqZqZqZqZq', -- This is 'password123' hashed
+  '<paste the bcrypt hash from above>',
   'admin',
   'Focus Admin',
   '+91 99999 99999',
@@ -33,57 +43,4 @@ VALUES (
 ON CONFLICT (email) DO NOTHING;
 ```
 
-## Option 3: Run Seed Script (Creates all sample data)
-
-Make sure your `.env` file has `DATABASE_URL` set, then run:
-
-```bash
-npx tsx server/seed.ts
-```
-
-This will create:
-- Admin user: `admin@focus.com` / `password123`
-- Client user: `rahul@example.com` / `password123`
-- Professional users: `dr.mehta@focus.com` / `password123`
-
-## Option 4: Quick Node.js Script
-
-Create a file `create-admin.js`:
-
-```javascript
-import bcrypt from 'bcryptjs';
-import { Pool } from 'pg';
-import 'dotenv/config';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-async function createAdmin() {
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  
-  await pool.query(`
-    INSERT INTO users (id, email, password, role, full_name, phone, created_at, updated_at)
-    VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW(), NOW())
-    ON CONFLICT (email) DO NOTHING
-  `, ['admin@focus.com', hashedPassword, 'admin', 'Focus Admin', '+91 99999 99999']);
-  
-  console.log('✅ Admin user created!');
-  console.log('Email: admin@focus.com');
-  console.log('Password: password123');
-  process.exit(0);
-}
-
-createAdmin().catch(console.error);
-```
-
-Then run: `node create-admin.js`
-
-## Admin Credentials
-
-Once created, use:
-- **Email:** `admin@focus.com`
-- **Password:** `password123`
-
-⚠️ **Important:** Change the password after first login!
-
-
-
+⚠️ **Important:** Whatever method you use, treat the admin password like a production secret — never commit it, and rotate it if it's ever shared over an insecure channel.

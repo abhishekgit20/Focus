@@ -2,13 +2,19 @@ import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Wallet, CreditCard, ShieldCheck, Zap, Gift, Lock, UserCheck, Headset, Smartphone, Loader2, CheckCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Wallet, CreditCard, ShieldCheck, Zap, Lock, UserCheck, Headset, Smartphone, Loader2, CheckCircle, ArrowDownCircle, ArrowUpCircle, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { getWalletTransactions, getWalletCheckoutSessionStatus } from "@/lib/api";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 declare global {
   interface Window {
@@ -24,7 +30,6 @@ interface WalletData {
 
 interface RechargePack {
   amount: number;
-  bonus: number;
   tag: string | null;
 }
 
@@ -37,6 +42,15 @@ function WalletPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
+  // Large top-ups require re-confirming MFA (see requireStepUpMfa on the
+  // server) before the gateway order is created. pendingRetryRef holds
+  // "whichever payment method the user was mid-way through" so verifying
+  // the code can resume it without the user re-selecting anything.
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [stepUpToken, setStepUpToken] = useState("");
+  const [stepUpSubmitting, setStepUpSubmitting] = useState(false);
+  const pendingRetryRef = useRef<(() => Promise<void>) | null>(null);
+
   const { data: wallet, isLoading: walletLoading } = useQuery<{ wallet: WalletData }>({
     queryKey: ["/api/wallet"],
     queryFn: async () => {
@@ -45,6 +59,15 @@ function WalletPageContent() {
       return res.json();
     },
   });
+
+  // The working endpoint already existed — this list just never called it,
+  // so every recharge/refund/credit was invisible here regardless of a real
+  // transaction history sitting in the database.
+  const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
+    queryKey: ["/api/wallet/transactions"],
+    queryFn: getWalletTransactions,
+  });
+  const transactions = transactionsData?.transactions ?? [];
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -59,12 +82,61 @@ function WalletPageContent() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("success") === "true") {
+    const sessionId = params.get("session_id");
+
+    if (params.get("success") === "true" && sessionId) {
       const amount = params.get("amount");
-      toast({
-        title: "Payment Successful!",
-        description: `₹${amount} has been added to your wallet.`,
-      });
+      window.history.replaceState({}, "", "/wallet");
+
+      let cancelled = false;
+      (async () => {
+        // Stripe redirects here as soon as Checkout completes — that can
+        // race ahead of (or, if the webhook silently fails, never be
+        // followed by) the webhook that actually credits the wallet. Poll
+        // for real confirmation for a few seconds instead of declaring
+        // success from the URL alone, which previously told users money
+        // had been added even when the credit hadn't landed yet.
+        for (let attempt = 0; attempt < 10 && !cancelled; attempt++) {
+          try {
+            const result = await getWalletCheckoutSessionStatus(sessionId);
+            if (result.status === "credited") {
+              toast({ title: "Payment Successful!", description: `₹${amount} has been added to your wallet.` });
+              queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/wallet/transactions"] });
+              return;
+            }
+            if (result.status === "not_paid") {
+              toast({
+                title: "Payment not completed",
+                description: "Your payment wasn't completed. No amount was charged.",
+                variant: "destructive",
+              });
+              return;
+            }
+            // "paid_pending_credit" — Stripe confirms payment, our webhook
+            // just hasn't landed yet. Keep polling.
+          } catch {
+            // Transient network/API failure — keep polling rather than
+            // telling the user their successful payment failed.
+          }
+          await sleep(2000);
+        }
+        if (!cancelled) {
+          toast({
+            title: "Payment received",
+            description: "Stripe confirmed your payment; crediting your wallet is taking a little longer than usual. Check back in a minute, or contact support if the balance doesn't update.",
+          });
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    } else if (params.get("success") === "true") {
+      // Pre-existing tab from before session_id was added to success_url —
+      // can't verify, so fall back to the old (best-effort) messaging.
+      const amount = params.get("amount");
+      toast({ title: "Payment Successful!", description: `₹${amount} has been added to your wallet.` });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
       window.history.replaceState({}, "", "/wallet");
     } else if (params.get("canceled") === "true") {
@@ -77,13 +149,18 @@ function WalletPageContent() {
     }
   }, [location, queryClient, toast]);
 
+  // No recharge bonus exists — neither the Razorpay verify path nor the
+  // Stripe webhook credits anything beyond the amount actually paid, so a
+  // "bonus" claim here would be advertising money the backend never
+  // delivers. `tag` labels are just marketing framing, not a factual
+  // promise of extra credit, so those stay.
   const rechargePacks: RechargePack[] = [
-    { amount: 200, bonus: 0, tag: null },
-    { amount: 500, bonus: 50, tag: "Popular" },
-    { amount: 1000, bonus: 150, tag: "Best Value" },
-    { amount: 2000, bonus: 400, tag: "Super Saver" },
-    { amount: 5000, bonus: 1200, tag: null },
-    { amount: 10000, bonus: 3000, tag: "Mega Pack" },
+    { amount: 200, tag: null },
+    { amount: 500, tag: "Popular" },
+    { amount: 1000, tag: "Best Value" },
+    { amount: 2000, tag: "Super Saver" },
+    { amount: 5000, tag: null },
+    { amount: 10000, tag: "Mega Pack" },
   ];
 
   const handleSelectPack = (pack: RechargePack) => {
@@ -106,6 +183,12 @@ function WalletPageContent() {
         }),
       });
 
+      if (orderRes.status === 428) {
+        pendingRetryRef.current = handleUPIPayment;
+        setIsProcessing(false);
+        setStepUpOpen(true);
+        return;
+      }
       if (!orderRes.ok) {
         const error = await orderRes.json();
         throw new Error(error.error || "Failed to create order");
@@ -121,35 +204,53 @@ function WalletPageContent() {
         description: `Add ₹${selectedPack.amount} to your wallet`,
         order_id: orderData.orderId,
         handler: async (response: any) => {
-          try {
-            const verifyRes = await fetch("/api/wallet/razorpay-verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                amount: selectedPack.amount,
-              }),
-            });
-
-            if (verifyRes.ok) {
-              toast({
-                title: "Payment Successful!",
-                description: `₹${selectedPack.amount} has been added to your wallet via UPI.`,
+          // Razorpay has already captured the money by the time this fires —
+          // a network blip on *this* call must not read as "payment failed."
+          // /api/wallet/razorpay-verify is idempotent (a retried call against
+          // an already-completed order returns success, not an error), so
+          // retry a few times before telling the user anything went wrong.
+          let lastError: unknown;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await sleep(1500 * attempt);
+            try {
+              const verifyRes = await fetch("/api/wallet/razorpay-verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  amount: selectedPack.amount,
+                }),
               });
-              queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-            } else {
-              throw new Error("Payment verification failed");
+
+              if (verifyRes.ok) {
+                toast({
+                  title: "Payment Successful!",
+                  description: `₹${selectedPack.amount} has been added to your wallet via UPI.`,
+                });
+                queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/wallet/transactions"] });
+                return;
+              }
+              // A genuine rejection (bad signature, order/user mismatch) —
+              // won't succeed on retry, so stop immediately instead of
+              // burning the retry budget on a call that can't change outcome.
+              const error = await verifyRes.json().catch(() => ({}));
+              lastError = new Error(error.error || "Payment verification failed");
+              break;
+            } catch (err) {
+              // fetch itself threw — a real network failure, worth retrying.
+              lastError = err;
             }
-          } catch (err) {
-            toast({
-              title: "Payment Error",
-              description: "There was an issue verifying your payment. Please contact support.",
-              variant: "destructive",
-            });
           }
+          console.error("Wallet UPI payment verification failed:", lastError);
+          toast({
+            title: "Payment received — verification delayed",
+            description: "Razorpay confirmed your payment but we couldn't verify it just now. Check your wallet balance in a minute before retrying, or contact support if it doesn't update.",
+            variant: "destructive",
+          });
         },
         prefill: {},
         theme: {
@@ -191,6 +292,12 @@ function WalletPageContent() {
         }),
       });
 
+      if (res.status === 428) {
+        pendingRetryRef.current = handleCardPayment;
+        setIsProcessing(false);
+        setStepUpOpen(true);
+        return;
+      }
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Failed to create checkout session");
@@ -205,6 +312,36 @@ function WalletPageContent() {
         variant: "destructive",
       });
       setIsProcessing(false);
+    }
+  };
+
+  const handleStepUpVerify = async () => {
+    const input = stepUpToken.trim();
+    if (!input) return;
+    setStepUpSubmitting(true);
+    try {
+      // Backup codes are 10 hex characters (see generateBackupCodes on the
+      // server); anything else is treated as a 6-digit TOTP code.
+      const isBackupCode = !/^\d{6}$/.test(input);
+      const res = await fetch("/api/auth/mfa/step-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(isBackupCode ? { backupCode: input } : { token: input }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Invalid verification code");
+      }
+      setStepUpOpen(false);
+      setStepUpToken("");
+      const retry = pendingRetryRef.current;
+      pendingRetryRef.current = null;
+      if (retry) await retry();
+    } catch (error: any) {
+      toast({ title: "Verification failed", description: error.message, variant: "destructive" });
+    } finally {
+      setStepUpSubmitting(false);
     }
   };
 
@@ -261,13 +398,7 @@ function WalletPageContent() {
                         </span>
                       )}
                       <div className="font-bold text-lg mb-1">₹{pack.amount}</div>
-                      {pack.bonus > 0 ? (
-                        <div className="text-xs text-green-600 font-medium flex items-center gap-1">
-                          <Gift className="w-3 h-3" /> Get ₹{pack.bonus} Extra
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">Standard Pack</div>
-                      )}
+                      <div className="text-xs text-muted-foreground">Standard Pack</div>
                     </button>
                   ))}
                 </div>
@@ -280,9 +411,39 @@ function WalletPageContent() {
 
               <div className="bg-background rounded-3xl shadow-sm border p-6">
                 <h3 className="font-bold text-lg mb-4">Recent Transactions</h3>
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  No transactions yet. Recharge to start your journey.
-                </div>
+                {transactionsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-14 bg-muted/50 animate-pulse rounded-xl" />
+                    ))}
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No transactions yet. Recharge to start your journey.
+                  </div>
+                ) : (
+                  <div className="space-y-1 max-h-80 overflow-y-auto">
+                    {transactions.slice(0, 20).map((txn) => {
+                      const isCredit = txn.type !== "payment";
+                      return (
+                        <div key={txn.id} className="flex items-center gap-3 py-3 border-b last:border-b-0">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isCredit ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                            {isCredit ? <ArrowDownCircle className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{txn.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(txn.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            </p>
+                          </div>
+                          <div className={`text-sm font-semibold shrink-0 ${isCredit ? "text-green-600" : "text-red-600"}`}>
+                            {isCredit ? "+" : "-"}₹{txn.amount}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -364,9 +525,6 @@ function WalletPageContent() {
                 {selectedPack && (
                   <span className="text-lg font-semibold text-foreground">
                     Recharge ₹{selectedPack.amount}
-                    {selectedPack.bonus > 0 && (
-                      <span className="text-green-600 text-sm ml-2">(+₹{selectedPack.bonus} bonus)</span>
-                    )}
                   </span>
                 )}
               </DialogDescription>
@@ -412,6 +570,39 @@ function WalletPageContent() {
               <Lock className="w-3 h-3" />
               Secured by Razorpay & Stripe
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={stepUpOpen}
+          onOpenChange={(open) => {
+            setStepUpOpen(open);
+            if (!open) {
+              setStepUpToken("");
+              pendingRetryRef.current = null;
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-primary" /> Verify it's you</DialogTitle>
+              <DialogDescription>
+                This is a large top-up, so we need to confirm your identity. Enter the 6-digit code from your authenticator app (or a backup code).
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              placeholder="6-digit code or backup code"
+              value={stepUpToken}
+              onChange={(e) => setStepUpToken(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleStepUpVerify()}
+              autoFocus
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStepUpOpen(false)}>Cancel</Button>
+              <Button onClick={handleStepUpVerify} disabled={stepUpSubmitting || !stepUpToken.trim()}>
+                {stepUpSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

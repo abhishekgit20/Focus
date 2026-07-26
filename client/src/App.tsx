@@ -12,6 +12,16 @@ import { ChatWidget } from "@/components/ChatWidget";
 import { SplashScreen } from "@/components/SplashScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Loader2 } from "lucide-react";
+import { useUserInboxSocket } from "@/hooks/useUserInboxSocket";
+
+// One live connection for the whole app, mounted once here rather than
+// per-page — see useUserInboxSocket for why: a single, always-on
+// subscription that keeps every page's cached data honest, instead of each
+// page needing to remember to open its own and invalidate the right things.
+function GlobalRealtimeSync() {
+  useUserInboxSocket();
+  return null;
+}
 
 // Images to preload
 import yogaImg from "@assets/generated_images/yoga_session_illustration.png";
@@ -30,6 +40,9 @@ import Therapists from "@/pages/Therapists";
 const Chatbot = lazy(() => import("@/pages/Chatbot"));
 const Login = lazy(() => import("@/pages/Login"));
 const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const Register = lazy(() => import("@/pages/Register"));
 const Recommendations = lazy(() => import("@/pages/Recommendations"));
 const ResourceDetail = lazy(() => import("@/pages/ResourceDetail"));
@@ -40,9 +53,17 @@ const FormulaGuide = lazy(() => import("@/pages/FormulaGuide"));
 const PartnerWithUs = lazy(() => import("@/pages/PartnerWithUs"));
 const PartnerWithUsOrganizations = lazy(() => import("@/pages/PartnerWithUsOrganizations"));
 const WalletPage = lazy(() => import("@/pages/Wallet"));
+const Subscription = lazy(() => import("@/pages/Subscription"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const ProfessionalDashboard = lazy(() => import("@/pages/ProfessionalDashboard"));
 const AdminFeedback = lazy(() => import("@/pages/AdminFeedback"));
+const AdminCrisisAlerts = lazy(() => import("@/pages/AdminCrisisAlerts"));
+const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
+const AdminApplications = lazy(() => import("@/pages/AdminApplications"));
+const AdminPayments = lazy(() => import("@/pages/AdminPayments"));
+const ApplyProfessional = lazy(() => import("@/pages/ApplyProfessional"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const Consultation = lazy(() => import("@/pages/Consultation"));
 const ProfessionalChat = lazy(() => import("@/pages/ProfessionalChat"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -73,20 +94,75 @@ function Router() {
           <Route path="/chatbot" component={Chatbot} />
           <Route path="/login" component={Login} />
           <Route path="/admin/login" component={AdminLogin} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/verify-email" component={VerifyEmail} />
           <Route path="/register" component={Register} />
-          <Route path="/profile" component={Profile} />
+          <Route path="/apply-professional">
+            <ProtectedRoute allowedRoles={["client"]}>
+              <ApplyProfessional />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/profile">
+            <ProtectedRoute allowedRoles={["client"]}>
+              <Profile />
+            </ProtectedRoute>
+          </Route>
           <Route path="/partner" component={PartnerWithUs} />
           <Route path="/partner-with-us" component={PartnerWithUsOrganizations} />
-          <Route path="/wallet" component={WalletPage} />
-          <Route path="/professional-dashboard">
+          <Route path="/wallet">
+            <ProtectedRoute allowedRoles={["client"]}>
+              <WalletPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/subscription">
             <ProtectedRoute>
+              <Subscription />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professional-dashboard/:tab?">
+            <ProtectedRoute allowedRoles={["professional"]}>
               <ProfessionalDashboard />
             </ProtectedRoute>
           </Route>
-          <Route path="/admin/feedback" component={AdminFeedback} />
+          <Route path="/admin/feedback">
+            <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <AdminFeedback />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/crisis-alerts">
+            <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <AdminCrisisAlerts />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/analytics">
+            <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <AdminAnalytics />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/applications">
+            <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <AdminApplications />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/payments">
+            <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <AdminPayments />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/privacy" component={PrivacyPolicy} />
+          <Route path="/terms" component={TermsOfService} />
           <Route path="/formula-guide" component={FormulaGuide} />
-          <Route path="/consultation/:professionalId/:type" component={Consultation} />
-          <Route path="/professional-chat/:sessionId" component={ProfessionalChat} />
+          <Route path="/consultation/:sessionId">
+            <ProtectedRoute>
+              <Consultation />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/professional-chat/:sessionId">
+            <ProtectedRoute>
+              <ProfessionalChat />
+            </ProtectedRoute>
+          </Route>
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -98,7 +174,12 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [location] = useLocation();
   
-  const isFullscreenPage = location.startsWith("/consultation") || location.startsWith("/professional-chat");
+  // Pages that ship their own app-shell chrome (brand bar, nav, profile menu)
+  // instead of the public marketing Navbar/Footer.
+  const hideGlobalNav =
+    location.startsWith("/consultation") ||
+    location.startsWith("/professional-chat") ||
+    location.startsWith("/professional-dashboard");
 
   useEffect(() => {
     // Preload critical images for Services and Home page
@@ -106,33 +187,61 @@ function App() {
       yogaImg, therapyImg, chatImg,
       heroBg1, heroBg2, heroBg3
     ];
-    
-    imagesToPreload.forEach((src) => {
-      const img = new Image();
-      img.src = src;
+
+    // Splash duration is tied to real image-load progress, not a fixed guess:
+    // a floor so the brand animation isn't cut off mid-transition on fast
+    // connections, a ceiling so a slow/failed load can't hang the app open.
+    const MIN_SPLASH_MS = 900; // covers the wordmark's ~800ms entrance animation
+    const MAX_SPLASH_MS = 1500;
+    const start = Date.now();
+    let cancelled = false;
+
+    const finish = () => {
+      if (cancelled) return;
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+      setTimeout(() => {
+        if (!cancelled) setIsLoading(false);
+      }, remaining);
+    };
+
+    const loadPromises = imagesToPreload.map(
+      (src) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = src;
+        })
+    );
+
+    const maxTimer = setTimeout(finish, MAX_SPLASH_MS);
+    Promise.all(loadPromises).then(() => {
+      clearTimeout(maxTimer);
+      finish();
     });
 
-    // Simulate initial loading for the "OM" splash screen
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800); // Reduced from 2500ms for faster entry
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(maxTimer);
+    };
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <GlobalRealtimeSync />
         <AnimatePresence mode="wait">
           {isLoading ? (
             <SplashScreen key="splash" />
           ) : (
             <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative animate-in fade-in duration-700">
-              {!isFullscreenPage && <Navbar />}
+              {!hideGlobalNav && <Navbar />}
               <main className="flex-grow">
                 <Router />
               </main>
-              {!isFullscreenPage && <Footer />}
-              {!isFullscreenPage && <ChatWidget />}
+              {!hideGlobalNav && <Footer />}
+              {!hideGlobalNav && <ChatWidget />}
             </div>
           )}
         </AnimatePresence>
