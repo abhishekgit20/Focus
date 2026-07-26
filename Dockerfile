@@ -10,6 +10,23 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
+# Production-only install for the final runtime image. The build itself
+# needs devDependencies (esbuild/vite/typescript/tsx/...), but none of that
+# tooling runs in production — esbuild in particular ships a compiled Go
+# binary that container-scanned as a pile of Go-stdlib CVEs (crypto/tls,
+# net/http2, etc.) even though esbuild never runs as a network-facing
+# service, only as a build-time bundler. Shipping the dev-inclusive
+# node_modules into the runner stage put that binary (and everything else
+# that's irrelevant at runtime) into the deployed image for no reason.
+# Confirmed via `npm ls esbuild --all` that every path to esbuild in the
+# tree comes through devDependencies only (drizzle-kit, tsx, vite, and the
+# direct devDependency) — omitting dev here can't remove anything the
+# running app actually needs.
+FROM base AS prod-deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
@@ -42,7 +59,7 @@ RUN adduser --system --uid 1001 nodejs
 # Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 USER nodejs
 
