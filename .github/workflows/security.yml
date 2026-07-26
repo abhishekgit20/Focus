@@ -2,9 +2,9 @@ name: Security
 
 on:
   push:
-    branches: [2026-01-04-d305, main]
+    branches: [2026-01-04-dev, main]
   pull_request:
-    branches: [2026-01-04-d305, main]
+    branches: [2026-01-04-dev, main]
   schedule:
     # Weekly, so newly-disclosed CVEs in existing dependencies get caught
     # even when nothing in the repo has changed.
