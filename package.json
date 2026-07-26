@@ -58,7 +58,7 @@
     "compression": "^1.8.1",
     "connect-pg-simple": "^10.0.0",
     "cookie": "^0.7.2",
-    "cookie-signature": "^1.0.7",
+    "cookie-signature": "^1.2.2",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "decimal.js": "^10.6.0",
