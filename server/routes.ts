@@ -874,7 +874,7 @@ export async function registerRoutes(
       const wallet = await storage.getWallet(authUser.id);
       if (wallet && Number(wallet.balance) > 0) {
         return res.status(409).json({
-          error: `You have ₹${wallet.balance} in your wallet. Please use it or contact support@focus.example.com before deleting your account.`,
+          error: `You have ₹${wallet.balance} in your wallet. Please use it or contact focus.abhix@gmail.com before deleting your account.`,
         });
       }
 

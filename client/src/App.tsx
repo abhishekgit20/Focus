@@ -64,6 +64,7 @@ const AdminPayments = lazy(() => import("@/pages/AdminPayments"));
 const ApplyProfessional = lazy(() => import("@/pages/ApplyProfessional"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const Consultation = lazy(() => import("@/pages/Consultation"));
 const ProfessionalChat = lazy(() => import("@/pages/ProfessionalChat"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -152,6 +153,7 @@ function Router() {
           </Route>
           <Route path="/privacy" component={PrivacyPolicy} />
           <Route path="/terms" component={TermsOfService} />
+          <Route path="/refund-policy" component={RefundPolicy} />
           <Route path="/formula-guide" component={FormulaGuide} />
           <Route path="/consultation/:sessionId">
             <ProtectedRoute>

@@ -1128,7 +1128,7 @@ export default function ProfessionalDashboard() {
                           onClick={() => {
                             toast({
                               title: "Payouts are processed manually for now",
-                              description: "Email support@focus.example.com with your account details and we'll transfer your balance within 2-3 business days.",
+                              description: "Email focus.abhix@gmail.com with your account details and we'll transfer your balance within 2-3 business days.",
                               duration: 8000,
                             });
                           }}

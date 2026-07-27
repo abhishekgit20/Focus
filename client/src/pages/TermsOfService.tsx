@@ -129,7 +129,7 @@ export default function TermsOfService() {
         <Section title="12. Contact">
           <p>
             Questions about these terms can be sent to{" "}
-            <a href="mailto:support@focus.example.com" className="text-primary underline">support@focus.example.com</a>.
+            <a href="mailto:focus.abhix@gmail.com" className="text-primary underline">focus.abhix@gmail.com</a>.
           </p>
           <p className="text-xs italic">
             (Replace this placeholder email with a real, monitored support inbox before launch.)

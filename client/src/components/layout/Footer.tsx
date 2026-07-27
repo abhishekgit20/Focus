@@ -14,7 +14,8 @@ export function Footer() {
         <div className="flex justify-center gap-6 text-sm text-muted-foreground">
           <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
-          <a href="mailto:support@focus.example.com" className="hover:text-primary transition-colors">Contact</a>
+          <Link href="/refund-policy" className="hover:text-primary transition-colors">Refund Policy</Link>
+          <a href="mailto:focus.abhix@gmail.com" className="hover:text-primary transition-colors">Contact</a>
           <Link href="/feedback" className="hover:text-primary transition-colors">Feedback</Link>
         </div>
         <p className="mt-8 text-xs text-muted-foreground/50">

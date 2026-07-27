@@ -8,7 +8,7 @@ import { Wallet, CreditCard, ShieldCheck, Zap, Lock, UserCheck, Headset, Smartph
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { getWalletTransactions, getWalletCheckoutSessionStatus } from "@/lib/api";
 
@@ -467,14 +467,16 @@ function WalletPageContent() {
                         <ShieldCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold">Money Back Guarantee</div>
-                        <div className="text-sm text-white/70">If you're not satisfied with the session</div>
+                        <div className="font-semibold">Protected Against Technical Issues</div>
+                        <div className="text-sm text-white/70">Refunded to your wallet if a session fails to connect or a professional no-shows</div>
                       </div>
                     </li>
                   </ul>
-                  <Button className="w-full mt-6 bg-white text-slate-900 hover:bg-white/90 font-bold" variant="secondary">
-                    Read Refund Policy
-                  </Button>
+                  <Link href="/refund-policy">
+                    <Button className="w-full mt-6 bg-white text-slate-900 hover:bg-white/90 font-bold" variant="secondary">
+                      Read Refund Policy
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
 
