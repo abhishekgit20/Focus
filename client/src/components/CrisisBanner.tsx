@@ -32,7 +32,7 @@ export function CrisisBanner() {
           <div className="flex items-center gap-2 flex-1 justify-center md:justify-start">
             <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
             <span>
-              In crisis? Call <a href="tel:988" className="underline hover:text-red-100">Kiran (Mental Health Rehab): 1800-599-0019</a> or <a href="tel:112" className="underline hover:text-red-100">Emergency: 112</a>
+              In crisis? Call <a href="tel:112" className="underline hover:text-red-100">Emergency: 112</a>
             </span>
           </div>
           <button 
