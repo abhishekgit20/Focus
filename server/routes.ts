@@ -505,52 +505,6 @@ export async function registerRoutes(
     }
   );
 
-  // Apple OAuth routes (Sign in with Apple)
-  app.get("/api/auth/apple", (req, res) => {
-    // Apple Sign In requires client-side implementation
-    // This endpoint will be called from the frontend after Apple authentication
-    const { id_token, user } = req.query;
-    
-    if (!id_token) {
-      return res.redirect("/login?error=apple_auth_failed");
-    }
-
-    // For now, redirect to a handler that will process the token
-    // In production, you'd verify the JWT token from Apple
-    res.redirect(`/api/auth/apple/callback?id_token=${id_token}&user=${encodeURIComponent(JSON.stringify(user || {}))}`);
-  });
-
-  app.get("/api/auth/apple/callback", async (req: any, res) => {
-    try {
-      // Note: In production, you should verify the Apple JWT token
-      // For now, this is a placeholder that shows the flow
-      const { id_token, user } = req.query;
-      
-      if (!id_token) {
-        return res.redirect("/login?error=apple_auth_failed");
-      }
-
-      // Parse user data if provided
-      let userData: any = {};
-      if (user) {
-        try {
-          userData = JSON.parse(decodeURIComponent(user as string));
-        } catch (e) {
-          console.error("Error parsing Apple user data:", e);
-        }
-      }
-
-      // In production, decode and verify the JWT token from Apple
-      // For now, we'll create a placeholder user flow
-      // You'll need to implement proper JWT verification using Apple's public keys
-      
-      res.redirect("/login?error=apple_not_configured");
-    } catch (error) {
-      console.error("Apple callback error:", error);
-      res.redirect("/login?error=apple_auth_failed");
-    }
-  });
-
   // Logout user
   app.post("/api/auth/logout", (req, res, next) => {
     req.logout((err) => {
