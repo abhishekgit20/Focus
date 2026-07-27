@@ -56,6 +56,14 @@ ENV PORT=5000
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 
+# The base image's bundled npm CLI (and its own internal node-tar
+# dependency) is never invoked at runtime -- this container only ever runs
+# `node dist/index.cjs`. Trivy flags CVEs in that bundled tar copy even
+# though it's dead weight, so remove the npm/npx/corepack install entirely
+# rather than carrying unused, vulnerable code into the shipped image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 # Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
