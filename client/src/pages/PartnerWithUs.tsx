@@ -165,7 +165,7 @@ export default function PartnerWithUs() {
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
-                        <Input id="firstName" placeholder="Dr. / Mr. / Ms." required />
+                        <Input id="firstName" placeholder="Given name" required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
