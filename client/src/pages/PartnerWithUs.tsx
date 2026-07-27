@@ -5,28 +5,24 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useLocation } from "wouter";
 import { Stethoscope, UserCheck, Heart, ArrowRight, CheckCircle2, Building2, Calendar, TrendingUp, ShieldCheck } from "lucide-react";
 import heroBg from "@assets/generated_images/professional_indian_doctors_and_therapists_collaborating.png";
 import dashboardImg from "@assets/generated_images/digital_dashboard_for_doctors_on_tablet.png";
 
 export default function PartnerWithUs() {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [, setLocation] = useLocation();
 
+  // This form never actually submitted anywhere -- it faked a loading spinner
+  // and a success toast with no backend call, so every professional who
+  // filled it out believed they'd applied and was never contacted. The real,
+  // fully-wired application flow (with required document upload and an
+  // admin approval queue) lives at /apply-professional; this form collects a
+  // subset of what that flow requires (no documents), so instead of
+  // duplicating that logic here, send the user to finish there.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulate API submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast({
-        title: "Application Submitted Successfully",
-        description: "Thank you for your interest. Our team will review your details and contact you within 48 hours.",
-      });
-    }, 2000);
+    setLocation("/apply-professional");
   };
 
   return (
@@ -256,8 +252,8 @@ export default function PartnerWithUs() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full h-12 text-lg rounded-full bg-primary hover:bg-primary/90" disabled={isSubmitting}>
-                    {isSubmitting ? "Submitting Application..." : "Submit Application"}
+                  <Button type="submit" className="w-full h-12 text-lg rounded-full bg-primary hover:bg-primary/90">
+                    Continue to Application
                   </Button>
                 </form>
               </div>
