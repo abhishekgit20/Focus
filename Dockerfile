@@ -41,6 +41,12 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+# Pull current Alpine security patches (e.g. libssl3/libcrypto3) rather than
+# whatever versions happened to be current when this base image tag was last
+# published -- otherwise the image silently drifts behind on OS-level CVEs
+# with no signal until a scanner catches it.
+RUN apk update && apk upgrade --no-cache
+
 # Defense-in-depth: the app's own date math (server/lib/istDate.ts) no longer
 # depends on the server's local clock, but this still protects anything else
 # that calls Date's local getHours()/toLocaleString()/etc. (e.g. log
