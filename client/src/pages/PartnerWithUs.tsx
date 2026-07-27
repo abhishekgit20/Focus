@@ -221,7 +221,6 @@ export default function PartnerWithUs() {
                     <div className="space-y-2">
                       <Label htmlFor="license">Medical Registration / License Number <span className="text-red-500">*</span></Label>
                       <Input id="license" placeholder="e.g., MCI-12345" required />
-                      <p className="text-xs text-muted-foreground">This will be verified against the national registry.</p>
                     </div>
 
                     <div className="space-y-2">
