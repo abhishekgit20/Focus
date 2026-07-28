@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./useAuth";
+import { useAiCompanionStatus } from "./useAiCompanionStatus";
 
 export interface CompanionMessage {
   role: "user" | "bot";
@@ -21,6 +22,9 @@ const DEFAULT_SOURCE = "Focus Wisdom Bot • Powered by ChatGPT";
 const CRISIS_SOURCE = "Crisis Support • Please Reach Out";
 const CONNECTION_ERROR_TEXT =
   "I apologize, but I'm having trouble connecting right now. Please try again in a moment. If you need immediate support, please reach out to a professional therapist.";
+const COMING_SOON_TEXT =
+  "I'm not quite ready yet -- our AI companion is coming soon! In the meantime, you can book a session with a real professional if you'd like to talk to someone.";
+const COMING_SOON_SOURCE = "Coming Soon";
 
 function formatBotSource(bhagavadGitaReference?: string, isCrisis?: boolean): string {
   if (isCrisis) return CRISIS_SOURCE;
@@ -38,6 +42,7 @@ function formatBotSource(bhagavadGitaReference?: string, isCrisis?: boolean): st
  */
 export function useCompanionChat(greeting: CompanionMessage) {
   const { user, isAuthenticated } = useAuth();
+  const { enabled: aiEnabled } = useAiCompanionStatus();
   const [messages, setMessages] = useState<CompanionMessage[]>([greeting]);
   const [isTyping, setIsTyping] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -84,6 +89,22 @@ export function useCompanionChat(greeting: CompanionMessage) {
   const sendMessage = useCallback(
     async (userMessage: string) => {
       setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+
+      // OPENAI_API_KEY isn't configured (or isn't valid) server-side yet --
+      // don't even call the real endpoints, which would just come back with
+      // a confusing "authentication issue" reply. Answer locally instead.
+      if (!aiEnabled) {
+        setIsTyping(true);
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { role: "bot", text: COMING_SOON_TEXT, source: COMING_SOON_SOURCE },
+          ]);
+          setIsTyping(false);
+        }, 500);
+        return;
+      }
+
       setIsTyping(true);
 
       try {
@@ -146,8 +167,8 @@ export function useCompanionChat(greeting: CompanionMessage) {
         setIsTyping(false);
       }
     },
-    [isAuthenticated, conversationId]
+    [isAuthenticated, conversationId, aiEnabled]
   );
 
-  return { messages, isTyping, isLoadingHistory, sendMessage, isAuthenticated };
+  return { messages, isTyping, isLoadingHistory, sendMessage, isAuthenticated, aiEnabled };
 }

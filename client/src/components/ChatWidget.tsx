@@ -12,7 +12,6 @@ import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
 import { Send, Sparkles, Volume2, VolumeX, Loader2, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useCompanionChat } from "@/hooks/useCompanionChat";
-import { useAiCompanionStatus } from "@/hooks/useAiCompanionStatus";
 import { renderFormattedText } from "@/lib/chatFormatting";
 
 const detectLanguage = (text: string): { lang: string; code: string } => {
@@ -37,8 +36,7 @@ const detectLanguage = (text: string): { lang: string; code: string } => {
 };
 
 export function ChatWidget() {
-  const { enabled: aiEnabled } = useAiCompanionStatus();
-  const { messages, isTyping, isLoadingHistory, sendMessage } = useCompanionChat({
+  const { messages, isTyping, isLoadingHistory, sendMessage, aiEnabled } = useCompanionChat({
     role: "bot",
     text: "Namaste! I am your companion for peace and clarity, powered by ChatGPT and the wisdom of the Bhagavad Gita. What is troubling your mind today?",
     source: "Gita Bot • Powered by ChatGPT"
@@ -146,8 +144,10 @@ export function ChatWidget() {
           <img src={botAvatar} alt="Chat" className="w-10 h-10 rounded-full object-cover" />
           <span className="sr-only">Open Chat</span>
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
+            {aiEnabled && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            )}
+            <span className={`relative inline-flex rounded-full h-4 w-4 ${aiEnabled ? "bg-green-500" : "bg-muted-foreground/50"}`}></span>
           </span>
         </Button>
       </SheetTrigger>
@@ -162,25 +162,12 @@ export function ChatWidget() {
                 Gita Bot <Sparkles className="w-4 h-4 text-primary" />
               </SheetTitle>
               <p className="text-xs text-muted-foreground">
-                {aiEnabled ? "Online • Powered by ChatGPT" : "Coming Soon"}
+                {aiEnabled ? "Online • Powered by ChatGPT" : "Offline"}
               </p>
             </div>
           </div>
         </SheetHeader>
 
-        {!aiEnabled ? (
-          <div className="flex-grow flex flex-col items-center justify-center text-center p-8 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Our AI companion is coming soon. We're putting the finishing touches on it before launch —
-              check back shortly.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Need to talk to someone now?{" "}
-              <a href="/therapists" className="text-primary underline">Book a session with a professional</a>.
-            </p>
-          </div>
-        ) : (
-        <>
         <ScrollArea className="flex-grow p-4 bg-slate-50/50">
           <div className="space-y-4" ref={scrollRef}>
             {isLoadingHistory && (
@@ -283,8 +270,6 @@ export function ChatWidget() {
             AI provides spiritual guidance, not medical advice.
           </p>
         </div>
-        </>
-        )}
       </SheetContent>
     </Sheet>
   );
