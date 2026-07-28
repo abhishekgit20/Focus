@@ -55,7 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AccountSecuritySettings } from "@/components/AccountSecuritySettings";
 import { SessionSettingsPanel } from "@/components/SessionSettingsPanel";
 import { formatDistanceToNow } from "date-fns";
-import dashboardImg from "@assets/generated_images/professional_therapist_dashboard_with_analytics_and_appointments.png";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import complianceBadge from "@assets/generated_images/secure_medical_data_privacy_compliance_shield_badge.png";
 
 interface DashboardStats {
@@ -483,11 +483,30 @@ export default function ProfessionalDashboard() {
       if (!res.ok) throw new Error('Failed to fetch sessions');
       return res.json();
     },
-    enabled: !!currentUser && currentUser.role === 'professional' && (activeNav === 'appointments' || activeNav === 'patients'),
+    enabled: !!currentUser && currentUser.role === 'professional' && (activeNav === 'dashboard' || activeNav === 'appointments' || activeNav === 'patients'),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 1,
   });
+
+  // Consultations per day for the last 7 days, for the Patient Analytics
+  // chart on the dashboard tab -- real counts from the same session list the
+  // Appointments/Patients tabs already fetch, not a placeholder graphic.
+  const weeklyConsultations = useMemo(() => {
+    const days: { date: string; count: number }[] = [];
+    const countByDate = new Map<string, number>();
+    for (const session of allSessionsData?.sessions ?? []) {
+      const dateKey = new Date(session.scheduledAt).toISOString().slice(0, 10);
+      countByDate.set(dateKey, (countByDate.get(dateKey) || 0) + 1);
+    }
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().slice(0, 10);
+      days.push({ date: dateKey, count: countByDate.get(dateKey) || 0 });
+    }
+    return days;
+  }, [allSessionsData]);
 
   // Earnings history, used by the Earnings tab
   const { data: earningsData, isLoading: earningsLoading } = useQuery<{ earnings: EarningsRecord[] }>({
@@ -1029,12 +1048,31 @@ export default function ProfessionalDashboard() {
                     <CardTitle>Patient Analytics</CardTitle>
                     <CardDescription>Weekly consultation overview</CardDescription>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <img 
-                      src={dashboardImg} 
-                      alt="Analytics Graph" 
-                      className="w-full h-64 object-cover object-top"
-                    />
+                  <CardContent className="h-64">
+                    {weeklyConsultations.every((d) => d.count === 0) ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+                        <Calendar className="w-10 h-10 text-muted-foreground/30" />
+                        <p className="text-muted-foreground text-sm">No consultations in the last 7 days yet</p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weeklyConsultations}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={(d) => new Date(d).toLocaleDateString("en-IN", { weekday: "short" })}
+                          />
+                          <YAxis allowDecimals={false} axisLine={false} tickLine={false} />
+                          <RechartsTooltip
+                            labelFormatter={(d) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            formatter={(value: number) => [value, "Consultations"]}
+                          />
+                          <Bar dataKey="count" fill="#FF9933" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </CardContent>
                 </Card>
               </div>
