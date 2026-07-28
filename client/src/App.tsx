@@ -80,6 +80,14 @@ function PageLoader() {
 function Router() {
   const [location] = useLocation();
 
+  // wouter (like any client-side router) doesn't reset scroll position on
+  // navigation -- without this, landing on a new page keeps whatever scroll
+  // offset the previous page was at, which reads as being dropped at a
+  // random point (often the footer) instead of the top of the new page.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
   return (
     <AnimatePresence mode="wait">
       <Suspense fallback={<PageLoader />}>
