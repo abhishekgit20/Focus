@@ -13,3 +13,14 @@ export function getDashboardPath(role: string): string {
       return "/profile";
   }
 }
+
+// Validates a `?redirect=` param before ever handing it to setLocation/
+// window.location.href — must be a same-origin relative path, never an
+// absolute URL (http://..., //evil.com) an attacker could smuggle into a
+// login/register link to redirect a user off-site after auth.
+export function getSafeRedirect(param: string | null): string | null {
+  if (!param) return null;
+  if (!param.startsWith("/") || param.startsWith("//")) return null;
+  if (param.includes("://")) return null;
+  return param;
+}

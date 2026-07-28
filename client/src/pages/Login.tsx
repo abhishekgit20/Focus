@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageTransition } from "@/components/PageTransition";
 import { Eye, EyeOff, Mail, ArrowLeft, Loader2, KeyRound } from "lucide-react";
 import { login, verifyMfaLogin, type UserResponse } from "@/lib/api";
-import { getDashboardPath } from "@/lib/roleRouting";
+import { getDashboardPath, getSafeRedirect } from "@/lib/roleRouting";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import heroBg from "@assets/generated_images/therapist_and_client_session.png";
@@ -46,7 +46,11 @@ export default function Login() {
 
     toast.success(`Welcome back, ${response.user.fullName}!`);
 
-    const redirectPath = getDashboardPath(response.user.role);
+    // If the user landed here via ProtectedRoute bouncing them off a page
+    // they weren't authenticated for yet (e.g. /apply-professional), send
+    // them back there instead of their default dashboard.
+    const requestedRedirect = getSafeRedirect(new URLSearchParams(window.location.search).get("redirect"));
+    const redirectPath = requestedRedirect || getDashboardPath(response.user.role);
 
     // Small delay so the toast is visible and the session cookie is set
     // before the full-page navigation (avoids a race where the next page's
@@ -304,7 +308,7 @@ export default function Login() {
             {!mfaRequired && (
               <div className="mt-8 pt-6 border-t border-muted/30 text-center space-y-3">
                 <p className="text-sm text-muted-foreground">Don't have an account?</p>
-                <Link href="/register">
+                <Link href={`/register${window.location.search}`}>
                   <Button variant="outline" className="w-full h-11 rounded-xl border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary font-semibold transition-all shadow-sm">
                     Create account in Focus
                   </Button>

@@ -27,7 +27,13 @@ export function ProtectedRoute({ children, redirectTo = "/login", allowedRoles }
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
-      setLocation(redirectTo);
+      // Carry the page the user was actually trying to reach through login/
+      // register, so e.g. an unauthenticated visitor submitting the partner
+      // form isn't dropped at their dashboard afterward, several steps away
+      // from the form they were about to fill out.
+      const intended = window.location.pathname + window.location.search;
+      const separator = redirectTo.includes("?") ? "&" : "?";
+      setLocation(`${redirectTo}${separator}redirect=${encodeURIComponent(intended)}`);
       return;
     }
     if (isForbidden && user) {

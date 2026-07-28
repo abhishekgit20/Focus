@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageTransition } from "@/components/PageTransition";
 import { Eye, EyeOff, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import { register } from "@/lib/api";
+import { getSafeRedirect } from "@/lib/roleRouting";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import heroBg from "@assets/generated_images/therapist_and_client_session.png";
@@ -88,7 +89,12 @@ export default function Register() {
 
       toast.success(`Welcome to Focus, ${response.user.fullName}!`);
 
-      setLocation("/profile");
+      // If registration was reached via ProtectedRoute bouncing an
+      // unauthenticated visitor off a page like /apply-professional, send
+      // them back there instead of the default profile page -- every public
+      // signup is a 'client' account anyway, so it's always a valid target.
+      const requestedRedirect = getSafeRedirect(new URLSearchParams(window.location.search).get("redirect"));
+      setLocation(requestedRedirect || "/profile");
     } catch (error: any) {
       toast.error(error.message || "Registration failed. Please try again.");
     } finally {
@@ -243,7 +249,7 @@ export default function Register() {
 
             <div className="mt-8 pt-6 border-t border-muted/30 text-center space-y-3">
               <p className="text-sm text-muted-foreground">Already have an account?</p>
-              <Link href="/login">
+              <Link href={`/login${window.location.search}`}>
                 <Button variant="outline" className="w-full h-11 rounded-xl border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary font-semibold transition-all shadow-sm">
                   Sign In to Focus
                 </Button>
