@@ -97,8 +97,21 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // ==================== PUBLIC CONFIG ====================
+
+  // Lets the frontend show a "coming soon" state for features gated on a
+  // secret that isn't set yet (e.g. the AI companion before OPENAI_API_KEY
+  // is configured in production), instead of letting users interact with a
+  // chat UI that quietly returns a canned "not configured" message. Never
+  // expose the actual secrets here -- booleans only.
+  app.get("/api/config", (_req, res) => {
+    res.json({
+      aiCompanionEnabled: !!process.env.OPENAI_API_KEY?.trim(),
+    });
+  });
+
   // ==================== AUTH ROUTES ====================
-  
+
   // Get current user (returns null if not authenticated - for frontend to check auth status)
   app.get('/api/auth/user', async (req: any, res) => {
     try {

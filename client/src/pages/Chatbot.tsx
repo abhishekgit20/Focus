@@ -7,10 +7,12 @@ import { Send, User, Sparkles, Loader2, Volume2, VolumeX, Mic, MicOff } from "lu
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useCompanionChat } from "@/hooks/useCompanionChat";
+import { useAiCompanionStatus } from "@/hooks/useAiCompanionStatus";
 import { renderFormattedText } from "@/lib/chatFormatting";
 import { AlertTriangle } from "lucide-react";
 
 export default function Chatbot() {
+  const { enabled: aiEnabled, isLoading: aiStatusLoading } = useAiCompanionStatus();
   const { messages, isTyping, isLoadingHistory, sendMessage } = useCompanionChat({
     role: "bot",
     text: "Namaste! I am your companion for peace and clarity, powered by advanced AI and the wisdom of the Bhagavad Gita. Tell me what you are feeling—stress, anger, confusion, grief, or anything else weighing on your mind. I'm here to listen and offer guidance.",
@@ -211,11 +213,46 @@ export default function Chatbot() {
     await sendMessage(userMessage);
   };
 
+  if (aiStatusLoading) {
+    return (
+      <PageTransition>
+        <div className="container mx-auto px-4 py-8 h-[calc(100vh-5rem)] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </PageTransition>
+    );
+  }
+
+  if (!aiEnabled) {
+    return (
+      <PageTransition>
+        <div className="container mx-auto px-4 py-8 h-[calc(100vh-5rem)] flex flex-col items-center justify-center">
+          <div className="bg-card border rounded-3xl shadow-sm max-w-md w-full p-10 text-center space-y-4">
+            <div className="w-20 h-20 mx-auto rounded-full bg-white border-2 border-primary/20 p-1 overflow-hidden shadow-sm">
+              <img src={botAvatar} alt="Gita Bot" className="w-full h-full object-cover rounded-full" />
+            </div>
+            <h2 className="font-bold text-2xl font-serif text-primary flex items-center justify-center gap-2">
+              Gita Bot <Sparkles className="w-5 h-5 text-primary" />
+            </h2>
+            <p className="text-muted-foreground">
+              Our AI companion is coming soon. We're putting the finishing touches on it before launch —
+              check back shortly.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Need to talk to someone now? You can{" "}
+              <a href="/therapists" className="text-primary underline">book a session with a professional</a> instead.
+            </p>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition>
       <div className="container mx-auto px-4 py-8 h-[calc(100vh-5rem)] flex flex-col">
         <div className="bg-card border rounded-3xl shadow-sm flex-grow flex flex-col overflow-hidden max-w-4xl mx-auto w-full relative">
-          
+
           {/* Decorative background element */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
 

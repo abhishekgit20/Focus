@@ -12,6 +12,7 @@ import botAvatar from "@assets/generated_images/wisdom_chatbot_avatar.png";
 import { Send, Sparkles, Volume2, VolumeX, Loader2, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useCompanionChat } from "@/hooks/useCompanionChat";
+import { useAiCompanionStatus } from "@/hooks/useAiCompanionStatus";
 import { renderFormattedText } from "@/lib/chatFormatting";
 
 const detectLanguage = (text: string): { lang: string; code: string } => {
@@ -36,6 +37,7 @@ const detectLanguage = (text: string): { lang: string; code: string } => {
 };
 
 export function ChatWidget() {
+  const { enabled: aiEnabled } = useAiCompanionStatus();
   const { messages, isTyping, isLoadingHistory, sendMessage } = useCompanionChat({
     role: "bot",
     text: "Namaste! I am your companion for peace and clarity, powered by ChatGPT and the wisdom of the Bhagavad Gita. What is troubling your mind today?",
@@ -159,11 +161,26 @@ export function ChatWidget() {
               <SheetTitle className="text-lg font-serif flex items-center gap-2">
                 Gita Bot <Sparkles className="w-4 h-4 text-primary" />
               </SheetTitle>
-              <p className="text-xs text-muted-foreground">Online • Powered by ChatGPT</p>
+              <p className="text-xs text-muted-foreground">
+                {aiEnabled ? "Online • Powered by ChatGPT" : "Coming Soon"}
+              </p>
             </div>
           </div>
         </SheetHeader>
 
+        {!aiEnabled ? (
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-8 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Our AI companion is coming soon. We're putting the finishing touches on it before launch —
+              check back shortly.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Need to talk to someone now?{" "}
+              <a href="/therapists" className="text-primary underline">Book a session with a professional</a>.
+            </p>
+          </div>
+        ) : (
+        <>
         <ScrollArea className="flex-grow p-4 bg-slate-50/50">
           <div className="space-y-4" ref={scrollRef}>
             {isLoadingHistory && (
@@ -266,6 +283,8 @@ export function ChatWidget() {
             AI provides spiritual guidance, not medical advice.
           </p>
         </div>
+        </>
+        )}
       </SheetContent>
     </Sheet>
   );
