@@ -847,7 +847,7 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
         <div className="flex">
-        <aside className="w-64 bg-background border-r hidden md:flex flex-col fixed h-[calc(100vh-64px)] top-16">
+        <aside className="w-64 bg-background border-r hidden md:flex flex-col fixed h-[calc(100vh-64px)] top-16 overflow-y-auto">
           <SidebarNav
             profileData={profileData}
             isProfileLoading={isProfileLoading}
