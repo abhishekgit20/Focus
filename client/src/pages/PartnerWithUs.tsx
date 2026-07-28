@@ -1,10 +1,5 @@
 import { PageTransition } from "@/components/PageTransition";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { Stethoscope, UserCheck, Heart, ArrowRight, CheckCircle2, Building2, Calendar, TrendingUp, ShieldCheck } from "lucide-react";
 import heroBg from "@assets/generated_images/professional_indian_doctors_and_therapists_collaborating.png";
@@ -13,17 +8,14 @@ import dashboardImg from "@assets/generated_images/digital_dashboard_for_doctors
 export default function PartnerWithUs() {
   const [, setLocation] = useLocation();
 
-  // This form never actually submitted anywhere -- it faked a loading spinner
-  // and a success toast with no backend call, so every professional who
-  // filled it out believed they'd applied and was never contacted. The real,
-  // fully-wired application flow (with required document upload and an
-  // admin approval queue) lives at /apply-professional; this form collects a
-  // subset of what that flow requires (no documents), so instead of
-  // duplicating that logic here, send the user to finish there.
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocation("/apply-professional");
-  };
+  // There used to be a full registration form duplicated here that never
+  // actually submitted anywhere (see git history). The real application --
+  // specialization, qualification, and required document upload -- only
+  // lives at /apply-professional, which is behind login. Rather than
+  // duplicate that form, this page now just explains the process and sends
+  // professionals there directly; ProtectedRoute already handles bouncing an
+  // unauthenticated visitor to /login and back once they sign in.
+  const goToApplication = () => setLocation("/apply-professional");
 
   return (
     <PageTransition>
@@ -48,7 +40,7 @@ export default function PartnerWithUs() {
                 Join our network of verified psychiatrists, therapists, and yoga gurus. Expand your practice and reach millions who need your help.
               </p>
               <div className="flex gap-4">
-                <Button size="lg" className="rounded-full bg-primary hover:bg-primary/90 text-white px-8" onClick={() => document.getElementById('register-form')?.scrollIntoView({ behavior: 'smooth' })}>
+                <Button size="lg" className="rounded-full bg-primary hover:bg-primary/90 text-white px-8" onClick={goToApplication}>
                   Join Network
                 </Button>
                 <Button size="lg" variant="outline" className="rounded-full text-white border-white/30 hover:bg-white/10 px-8" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -71,8 +63,8 @@ export default function PartnerWithUs() {
               {[
                 {
                   icon: <UserCheck className="w-8 h-8 text-primary" />,
-                  title: "Register & Verify",
-                  desc: "Complete your profile and upload credentials for our verification team."
+                  title: "Apply & Verify",
+                  desc: "Sign in (or create an account), then submit your credentials and documents for our team to review."
                 },
                 {
                   icon: <Calendar className="w-8 h-8 text-secondary" />,
@@ -143,118 +135,55 @@ export default function PartnerWithUs() {
               </div>
             </div>
 
-            {/* Registration Form */}
+            {/* Application CTA */}
             <div className="lg:col-span-2">
-              <div id="register-form" className="bg-background border rounded-3xl p-8 shadow-xl">
+              <div className="bg-background border rounded-3xl p-8 shadow-xl">
                 <div className="mb-8">
-                  <h2 className="text-2xl font-bold mb-2">Professional Registration</h2>
-                  <p className="text-muted-foreground">Complete your profile to join the Focus network. All fields marked with <span className="text-red-500">*</span> are mandatory.</p>
+                  <h2 className="text-2xl font-bold mb-2">Ready to Join?</h2>
+                  <p className="text-muted-foreground">Here's exactly what happens when you apply -- no surprises.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  {/* Basic Info */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">1</span>
-                      Basic Information
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
-                        <Input id="firstName" placeholder="Given name" required />
+                <div className="space-y-6 mb-8">
+                  {[
+                    {
+                      title: "Sign in, or create a free account",
+                      desc: "You'll need a Focus account before applying. If you don't have one yet, you can create it as part of this next step.",
+                    },
+                    {
+                      title: "Complete your professional application",
+                      desc: "Share your specialization, qualification, and experience, and upload your government ID and professional license.",
+                    },
+                    {
+                      title: "Our team reviews your credentials",
+                      desc: "A real person reviews every application manually -- you'll get an email once it's been approved or if we need more information.",
+                    },
+                    {
+                      title: "Set up your profile and start practicing",
+                      desc: "Once approved, configure your session pricing and availability, and your profile goes live to clients.",
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
-                        <Input id="lastName" placeholder="Surname" required />
+                      <div>
+                        <h4 className="font-semibold">{item.title}</h4>
+                        <p className="text-sm text-muted-foreground">{item.desc}</p>
                       </div>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
-                        <Input id="email" type="email" placeholder="doctor@example.com" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Mobile Number <span className="text-red-500">*</span></Label>
-                        <Input id="phone" type="tel" placeholder="+91 98765 43210" required />
-                      </div>
-                    </div>
-                  </div>
+                  ))}
+                </div>
 
-                  {/* Professional Details */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">2</span>
-                      Professional Details
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="role">Profession <span className="text-red-500">*</span></Label>
-                        <Select required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="psychiatrist">Psychiatrist (MD)</SelectItem>
-                            <SelectItem value="psychologist">Clinical Psychologist</SelectItem>
-                            <SelectItem value="counselor">Counselor / Therapist</SelectItem>
-                            <SelectItem value="yoga">Yoga Therapist / Guru</SelectItem>
-                            <SelectItem value="ayurveda">Ayurveda Practitioner</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="experience">Years of Experience <span className="text-red-500">*</span></Label>
-                        <Select required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select experience" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0-2">0-2 Years</SelectItem>
-                            <SelectItem value="3-5">3-5 Years</SelectItem>
-                            <SelectItem value="5-10">5-10 Years</SelectItem>
-                            <SelectItem value="10+">10+ Years</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="license">Medical Registration / License Number <span className="text-red-500">*</span></Label>
-                      <Input id="license" placeholder="e.g., MCI-12345" required />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="specialization">Specializations (Comma separated)</Label>
-                      <Input id="specialization" placeholder="e.g., Anxiety, Depression, Trauma, Cognitive Behavioral Therapy" />
-                    </div>
-                  </div>
-
-                  {/* Clinic Details */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">3</span>
-                      Practice Details
-                    </h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="clinicName">Clinic / Hospital Name</Label>
-                      <Input id="clinicName" placeholder="Where do you currently practice?" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Professional Bio</Label>
-                      <Textarea id="bio" placeholder="Tell us about your approach to mental health..." className="min-h-[100px]" />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="terms" required />
-                      <Label htmlFor="terms" className="text-sm font-normal">
-                        I agree to the <a href="#" className="text-primary underline">Partner Terms & Conditions</a> and certify that my credentials are valid.
-                      </Label>
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full h-12 text-lg rounded-full bg-primary hover:bg-primary/90">
-                    Continue to Application
-                  </Button>
-                </form>
+                <Button
+                  size="lg"
+                  className="w-full h-12 text-lg rounded-full bg-primary hover:bg-primary/90"
+                  onClick={goToApplication}
+                >
+                  Start Your Application <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Don't have a Focus account yet? No problem -- you can create one as part of this step.
+                </p>
               </div>
             </div>
           </div>
