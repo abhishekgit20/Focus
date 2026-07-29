@@ -71,6 +71,7 @@ import { getIceServers } from "./webrtcIce";
 import * as money from "./lib/money";
 import { getPgErrorCode } from "./lib/dbErrors";
 import { computePricing, decomposeLockedPrice, OfferingNotFoundError } from "./pricing";
+import { computeBreakdownFromBase } from "./lib/pricingMath";
 import { getAvailableSlots } from "./booking/availability";
 import { getOrCreateInvoice, renderInvoicePdf } from "./booking/invoice";
 import { notifyIfInstantSessionNowPending } from "./booking/notifications";
@@ -1364,7 +1365,25 @@ export async function registerRoutes(
   app.get("/api/professionals/:userId/offerings", async (req, res, next) => {
     try {
       const all = await storage.getProfessionalOfferings(req.params.userId);
-      res.json({ offerings: all.filter((o) => o.enabled) });
+      // BUG FIX (price mismatch between booking and call-time charge): this
+      // used to return each offering's raw `price` only -- the professional's
+      // base rate before GST -- and the client displayed that number
+      // throughout the entire booking flow (template selection, "Pay ₹X"
+      // button, wallet-sufficiency checks) as if it were the final amount.
+      // reserveSlot() has always locked session.priceAtBooking as the
+      // GST-inclusive total (see server/pricing.ts's computePricing), so the
+      // client was shown a lower number than what actually got charged/
+      // debited moments later -- exactly the reported "shown ₹200, charged
+      // ₹236" bug. totalPrice here is computed via the same
+      // computeBreakdownFromBase() the backend uses to set priceAtBooking,
+      // so this is the true final amount, not a second independent formula
+      // that could drift from it. `price` (the base rate) is kept for the
+      // professional's own Session Settings page, which edits that raw
+      // value -- only the public, client-facing response gains this field.
+      const offerings = all
+        .filter((o) => o.enabled)
+        .map((o) => ({ ...o, totalPrice: computeBreakdownFromBase(o.price).total }));
+      res.json({ offerings });
     } catch (error) {
       next(error);
     }

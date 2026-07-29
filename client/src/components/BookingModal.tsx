@@ -23,7 +23,7 @@ import {
   reserveBookingSlot,
   payForBooking,
   verifyBookingPayment,
-  type ProfessionalOffering,
+  type PublicProfessionalOffering,
 } from "@/lib/api";
 
 declare global {
@@ -64,7 +64,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
 
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("instant");
-  const [selectedOffering, setSelectedOffering] = useState<ProfessionalOffering | null>(null);
+  const [selectedOffering, setSelectedOffering] = useState<PublicProfessionalOffering | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -110,7 +110,15 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
     enabled: open && mode === "scheduled" && !!selectedDate && !!selectedOffering,
   });
 
-  const price = selectedOffering ? Number(selectedOffering.price) : 0;
+  // BUG FIX (price mismatch between booking and call-time charge): this used
+  // to read selectedOffering.price -- the professional's raw base rate
+  // before GST -- and that pre-tax number was what got shown on every screen
+  // in this modal (including the "Pay ₹X" button), while the backend
+  // actually locked and charged the GST-inclusive total moments later.
+  // totalPrice is computed server-side via the exact same
+  // computeBreakdownFromBase() that becomes session.priceAtBooking, so this
+  // is the true final amount, not a second formula that can drift from it.
+  const price = selectedOffering ? Number(selectedOffering.totalPrice) : 0;
   const walletCoversFull = walletBalance >= price;
   const walletCoversPartial = walletBalance > 0 && walletBalance < price;
 
@@ -268,7 +276,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
                   className="w-full text-left p-3 rounded-xl border hover:border-primary transition-colors flex items-center justify-between"
                 >
                   <span className="text-sm font-medium">Session</span>
-                  <span className="text-sm font-semibold text-primary">₹{o.price}</span>
+                  <span className="text-sm font-semibold text-primary">₹{o.totalPrice}</span>
                 </button>
               ))
             )}

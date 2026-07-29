@@ -87,6 +87,7 @@ import { eq, desc, and, sql, gte, lte, lt } from "drizzle-orm";
 import { sanitizeUser, type SafeUser } from "./security/sanitizeUser";
 import * as money from "./lib/money";
 import { isUniqueViolation } from "./lib/dbErrors";
+import { computeBreakdownFromBase } from "./lib/pricingMath";
 
 export type { SafeUser };
 export { sanitizeUser };
@@ -486,10 +487,17 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // BUG FIX (price mismatch between booking and call-time charge): MIN()
+    // above reads the raw base price -- what the professional actually
+    // receives before GST -- but this minPrice is shown to clients as
+    // "Session Starts From ₹X" before they've even opened a booking flow.
+    // Run it through the same computeBreakdownFromBase() the backend uses to
+    // lock priceAtBooking, so this figure is never lower than what a client
+    // will actually be charged.
     return results.map((r) => ({
       ...r.profile,
       user: sanitizeUser(r.user!),
-      minPrice: r.minPrice,
+      minPrice: r.minPrice != null ? computeBreakdownFromBase(r.minPrice).total : null,
     }));
   }
 

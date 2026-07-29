@@ -199,6 +199,15 @@ export interface ProfessionalOffering {
   enabled: boolean;
 }
 
+// The public, client-facing offerings response only (not the professional's
+// own /api/professional/session-offerings, which edits the raw base `price`
+// and never included this field). totalPrice is the actual GST-inclusive
+// amount that will be locked as priceAtBooking -- the number a client should
+// see and pay, everywhere, from the very first screen that shows a price.
+export interface PublicProfessionalOffering extends ProfessionalOffering {
+  totalPrice: string;
+}
+
 export async function getSessionTemplates(): Promise<{ templates: SessionTemplate[] }> {
   return apiRequest("/session-templates");
 }
@@ -216,7 +225,7 @@ export async function upsertOffering(input: {
   return apiRequest("/professional/session-offerings", { method: "PUT", body: JSON.stringify(input) });
 }
 
-export async function getProfessionalOfferings(professionalId: string): Promise<{ offerings: ProfessionalOffering[] }> {
+export async function getProfessionalOfferings(professionalId: string): Promise<{ offerings: PublicProfessionalOffering[] }> {
   return apiRequest(`/professionals/${professionalId}/offerings`);
 }
 
