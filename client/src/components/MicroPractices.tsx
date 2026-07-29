@@ -17,6 +17,15 @@ interface Practice {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
+  // Full, static class name for the "Start" button -- must be a literal
+  // string, not built at runtime (e.g. via .replace() on `color`), because
+  // Tailwind's build-time scanner only picks up classes it can see written
+  // out in source. A dynamically-constructed class like
+  // `color.replace("text-", "bg-")` never appears literally anywhere in
+  // this file, so Tailwind never generates the CSS for it -- the button
+  // rendered with white text and no background at all, invisible against
+  // a light card.
+  buttonColor: string;
 }
 
 const PRACTICES: Practice[] = [
@@ -28,6 +37,7 @@ const PRACTICES: Practice[] = [
     icon: <Wind className="w-5 h-5" />,
     color: "text-blue-700",
     bgColor: "bg-blue-50 border-blue-200",
+    buttonColor: "bg-blue-600",
   },
   {
     id: "grounding",
@@ -37,6 +47,7 @@ const PRACTICES: Practice[] = [
     icon: <Flower2 className="w-5 h-5" />,
     color: "text-green-700",
     bgColor: "bg-green-50 border-green-200",
+    buttonColor: "bg-green-600",
   },
   {
     id: "gratitude",
@@ -46,6 +57,7 @@ const PRACTICES: Practice[] = [
     icon: <Heart className="w-5 h-5" />,
     color: "text-pink-700",
     bgColor: "bg-pink-50 border-pink-200",
+    buttonColor: "bg-pink-600",
   },
   {
     id: "meditation",
@@ -55,6 +67,7 @@ const PRACTICES: Practice[] = [
     icon: <Sparkles className="w-5 h-5" />,
     color: "text-purple-700",
     bgColor: "bg-purple-50 border-purple-200",
+    buttonColor: "bg-purple-600",
   },
 ];
 
@@ -160,7 +173,7 @@ export function MicroPractices() {
                             <Button
                               size="sm"
                               onClick={() => handleStartPractice(practice)}
-                              className={`${practice.color.replace("text-", "bg-").replace("-700", "-600")} hover:opacity-90 text-white`}
+                              className={`${practice.buttonColor} hover:opacity-90 text-white`}
                             >
                               Start
                             </Button>

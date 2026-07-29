@@ -458,8 +458,8 @@ function WalletPageContent() {
                         <Wallet className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold">Pay per minute</div>
-                        <div className="text-sm text-white/70">Only pay for the time you speak</div>
+                        <div className="font-semibold">No Hidden Charges</div>
+                        <div className="text-sm text-white/70">The price you see is the exact price you pay. No surprises when you join a session.</div>
                       </div>
                     </li>
                     <li className="flex gap-3">
@@ -467,8 +467,8 @@ function WalletPageContent() {
                         <ShieldCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold">Protected Against Technical Issues</div>
-                        <div className="text-sm text-white/70">Refunded to your wallet if a session fails to connect or a professional no-shows</div>
+                        <div className="font-semibold">You're Covered</div>
+                        <div className="text-sm text-white/70">If a call drops, fails to connect, or a professional misses your session, you get a full refund to your wallet.</div>
                       </div>
                     </li>
                   </ul>
