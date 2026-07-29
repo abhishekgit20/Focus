@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getSessionById, getProfessionalProfile, updateSessionStatus, getSessionMessages, sendSessionMessageViaRest } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { formatRupees } from "@/lib/utils";
 import { useWebRTCCall } from "@/hooks/useWebRTCCall";
 import { CallPanel } from "@/components/CallPanel";
 import { onInboxEvent } from "@/lib/realtimeEvents";
@@ -385,7 +386,7 @@ export default function Consultation() {
                   <Clock className="w-4 h-4" />
                   <span className="font-mono text-sm">{formatTime(sessionDuration)} / {plannedMinutes} min</span>
                 </div>
-                <div className="bg-green-500/20 px-3 py-1.5 rounded-full text-sm">₹{price} (fixed)</div>
+                <div className="bg-green-500/20 px-3 py-1.5 rounded-full text-sm">{formatRupees(price)} (fixed)</div>
               </div>
             )}
           </div>
@@ -399,7 +400,7 @@ export default function Consultation() {
                 <h2 className="text-2xl font-bold font-serif mb-1">{professional.name}</h2>
                 <Loader2 className="w-6 h-6 animate-spin mx-auto my-4 text-primary" />
                 <p className="text-muted-foreground">Waiting for {professional.name} to accept your request...</p>
-                <p className="text-xs text-muted-foreground mt-2">Payment already confirmed — ₹{price}</p>
+                <p className="text-xs text-muted-foreground mt-2">Payment already confirmed — {formatRupees(price)}</p>
               </CardContent>
             </Card>
           )}
@@ -448,7 +449,7 @@ export default function Consultation() {
 
                 <div className="bg-muted rounded-lg p-4 mb-6">
                   <div className="text-sm text-muted-foreground mb-1">Session</div>
-                  <div className="text-2xl font-bold text-primary">₹{price}</div>
+                  <div className="text-2xl font-bold text-primary">{formatRupees(price)}</div>
                   <div className="text-xs text-muted-foreground mt-1">{plannedMinutes} minutes — paid in full</div>
                 </div>
 

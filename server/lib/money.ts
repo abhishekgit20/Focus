@@ -33,6 +33,13 @@ export function isGreaterThan(a: string | number, b: string | number): boolean {
   return new Decimal(a).greaterThan(b);
 }
 
+// Rounds to the nearest whole rupee (still returned as a "X.00" string to
+// match the decimal(10,2) column convention every money value round-trips
+// through). Half rounds up, e.g. 206.50 -> 207.00.
+export function roundToWholeRupee(a: string | number): string {
+  return new Decimal(a).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).toFixed(2);
+}
+
 export function toPaise(rupees: string | number): number {
   return new Decimal(rupees).times(100).toDecimalPlaces(0).toNumber();
 }

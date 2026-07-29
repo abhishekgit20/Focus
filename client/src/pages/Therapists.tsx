@@ -8,6 +8,7 @@ import { FilterPanel } from "@/components/FilterPanel";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { formatRupees } from "@/lib/utils";
 import { getAllProfessionals } from "@/lib/api";
 import { BookingModal } from "@/components/BookingModal";
 
@@ -210,7 +211,7 @@ export default function Therapists() {
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-xs text-muted-foreground">Session Starts From</div>
-                    <div className="text-lg font-bold text-primary">₹{prof.minPrice ?? "—"}</div>
+                    <div className="text-lg font-bold text-primary">{prof.minPrice != null ? formatRupees(prof.minPrice) : "—"}</div>
                   </div>
                 </div>
 

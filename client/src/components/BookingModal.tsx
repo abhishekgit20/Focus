@@ -25,6 +25,7 @@ import {
   verifyBookingPayment,
   type PublicProfessionalOffering,
 } from "@/lib/api";
+import { formatRupees } from "@/lib/utils";
 
 declare global {
   interface Window {
@@ -276,7 +277,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
                   className="w-full text-left p-3 rounded-xl border hover:border-primary transition-colors flex items-center justify-between"
                 >
                   <span className="text-sm font-medium">Session</span>
-                  <span className="text-sm font-semibold text-primary">₹{o.totalPrice}</span>
+                  <span className="text-sm font-semibold text-primary">{formatRupees(o.totalPrice)}</span>
                 </button>
               ))
             )}
@@ -335,7 +336,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
               {mode === "scheduled" && selectedSlot && (
                 <div className="flex justify-between"><span className="text-muted-foreground">When</span><span>{format(new Date(selectedSlot), "PPp")}</span></div>
               )}
-              <div className="flex justify-between font-semibold pt-1 border-t mt-1"><span>Total</span><span>₹{price.toFixed(2)}</span></div>
+              <div className="flex justify-between font-semibold pt-1 border-t mt-1"><span>Total</span><span>{formatRupees(price)}</span></div>
             </div>
 
             <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)} className="space-y-2">
@@ -354,7 +355,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
                   <Wallet className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1">
                     <Label htmlFor="pm-wallet" className="cursor-pointer">Pay Using Wallet</Label>
-                    <p className="text-xs text-muted-foreground">Balance ₹{walletBalance.toFixed(2)} — remaining after: ₹{(walletBalance - price).toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">Balance {formatRupees(walletBalance)} — remaining after: {formatRupees(walletBalance - price)}</p>
                   </div>
                 </label>
               )}
@@ -365,7 +366,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
                   <Split className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1">
                     <Label htmlFor="pm-split" className="cursor-pointer">Split Payment</Label>
-                    <p className="text-xs text-muted-foreground">₹{walletBalance.toFixed(2)} from wallet + ₹{(price - walletBalance).toFixed(2)} via UPI/card</p>
+                    <p className="text-xs text-muted-foreground">{formatRupees(walletBalance)} from wallet + {formatRupees(price - walletBalance)} via UPI/card</p>
                   </div>
                 </label>
               )}
@@ -374,7 +375,7 @@ export function BookingModal({ professionalId, professionalName, isOnline, consu
             <div className="flex justify-between items-center">
               <Button variant="ghost" size="sm" onClick={() => setStep(mode === "instant" ? "template" : "datetime")} disabled={isProcessing}>Back</Button>
               <Button onClick={handleReserveAndPay} disabled={isProcessing}>
-                {isProcessing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</> : `Pay ₹${price.toFixed(2)}`}
+                {isProcessing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</> : `Pay ${formatRupees(price)}`}
               </Button>
             </div>
           </div>

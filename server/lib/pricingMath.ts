@@ -29,7 +29,13 @@ export function computeBreakdownFromBase(base: string, discount = "0.00"): Price
   const discountedBase = money.sub(base, discount);
   const tax = money.mul(discountedBase, gstRate());
   const commission = money.mul(discountedBase, commissionRate());
-  const total = money.add(discountedBase, tax);
+  // Rounded to a whole rupee here -- the one place a session's price is
+  // ever computed from scratch -- so priceAtBooking, every later read of it
+  // (wallet debit, invoice), and what's displayed before booking are all
+  // the same clean number. Rounding only at display time, after a fractional
+  // total was already locked/charged, would recreate the exact
+  // shown-vs-charged mismatch this codebase already had to fix once.
+  const total = money.roundToWholeRupee(money.add(discountedBase, tax));
   return { base, discount, tax, commission, total };
 }
 
